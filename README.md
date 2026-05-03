@@ -31,7 +31,7 @@ streamed in real time.
 
 ### Setup
 ```bash
-git clone https://github.com/YOUR_USERNAME/rag-chatbot.git
+git clone https://github.com/hsnx999/rag-chatbot.git
 cd rag-chatbot
 python -m venv .venv
 source .venv/bin/activate
