@@ -1,5 +1,4 @@
-import os
-from typing import List
+from typing import List, Optional
 from langchain.schema import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 import chromadb
@@ -13,30 +12,40 @@ def get_embeddings():
 
 
 def get_chroma_client():
-    """Get a persistent ChromaDB client that saves to disk."""
     return chromadb.PersistentClient(path=CHROMA_PERSIST_DIR)
 
 
-def build_vector_store(chunks: List[Document]) -> chromadb.Collection:
+def get_or_create_collection() -> chromadb.Collection:
     """
-    Embed chunks and store in ChromaDB.
-    Deletes any existing collection first so re-uploads are clean.
+    Get existing collection or create a fresh one.
+    Unlike before, we no longer delete it on every upload —
+    we accumulate documents across multiple uploads.
     """
     client = get_chroma_client()
+    collection = client.get_or_create_collection(COLLECTION_NAME)
+    return collection
 
-    # Delete old collection if it exists (fresh start on new upload)
-    try:
-        client.delete_collection(COLLECTION_NAME)
-    except Exception:
-        pass
 
-    collection = client.create_collection(COLLECTION_NAME)
+def add_documents(
+    collection: chromadb.Collection,
+    chunks: List[Document],
+    filename: str,
+) -> int:
+    """
+    Embed chunks and add them to the existing collection.
+    Each chunk is tagged with the source filename so answers
+    can cite which document they came from.
+
+    Returns the number of chunks added.
+    """
     embeddings_model = get_embeddings()
 
-    # Embed all chunks in one API call
-    texts = [chunk.page_content for chunk in chunks]
-    metadatas = [chunk.metadata for chunk in chunks]
-    ids = [f"chunk_{i}" for i in range(len(chunks))]
+    texts     = [chunk.page_content for chunk in chunks]
+    # Use filename as the source tag — clean and readable
+    metadatas = [{**chunk.metadata, "source": filename} for chunk in chunks]
+    # IDs must be unique across the whole collection
+    # Prefix with filename to avoid collisions across docs
+    ids = [f"{filename}_chunk_{i}" for i in range(len(chunks))]
 
     vectors = embeddings_model.embed_documents(texts)
 
@@ -46,9 +55,29 @@ def build_vector_store(chunks: List[Document]) -> chromadb.Collection:
         metadatas=metadatas,
         ids=ids,
     )
+    return len(chunks)
 
-    print(f"Stored {collection.count()} chunks in ChromaDB")
-    return collection
+
+def remove_document(collection: chromadb.Collection, filename: str):
+    """
+    Delete all chunks belonging to a specific file.
+    ChromaDB supports filtering deletes by metadata.
+    """
+    collection.delete(where={"source": filename})
+
+
+def get_indexed_files(collection: chromadb.Collection) -> list[str]:
+    """
+    Return a list of unique filenames currently in the collection.
+    """
+    if collection.count() == 0:
+        return []
+    results = collection.get(include=["metadatas"])
+    seen = set()
+    for meta in results["metadatas"]:
+        if "source" in meta:
+            seen.add(meta["source"])
+    return sorted(seen)
 
 
 def query_vector_store(
@@ -57,20 +86,22 @@ def query_vector_store(
     k: int = 4,
 ) -> List[Document]:
     """
-    Embed the query and find the k most similar chunks.
-    Returns LangChain Document objects so the rest of the app stays consistent.
+    Embed the query and find the k most similar chunks across all documents.
     """
     embeddings_model = get_embeddings()
     query_vector = embeddings_model.embed_query(query)
 
+    # Cap k at the number of chunks in the collection
+    n = min(k, collection.count())
+    if n == 0:
+        return []
+
     results = collection.query(
         query_embeddings=[query_vector],
-        n_results=k,
+        n_results=n,
     )
 
-    # Repack into LangChain Document objects
     docs = []
     for text, metadata in zip(results["documents"][0], results["metadatas"][0]):
         docs.append(Document(page_content=text, metadata=metadata))
-
     return docs
