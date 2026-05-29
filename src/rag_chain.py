@@ -94,8 +94,8 @@ def condense_question(question: str, history: list) -> str:
         history=history_str,
         question=question,
     )
-    llm = get_llm()
     try:
+        llm = get_llm()
         response = llm.invoke(prompt)
         return response.content.strip()
     except Exception:
