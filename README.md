@@ -8,6 +8,8 @@ scores.
 
 Built from scratch as a portfolio project to learn production RAG architecture.
 
+🔗 **[Live Demo →](https://hsnx999-rag-chatbot.streamlit.app)**
+
 ---
 
 ## Features
