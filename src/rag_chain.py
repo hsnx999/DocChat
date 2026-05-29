@@ -40,9 +40,14 @@ Context:
     ("human", "{question}"),
 ])
 
+_llm = None
+
 
 def get_llm():
-    return ChatGroq(model="llama-3.1-8b-instant", temperature=0.0)
+    global _llm
+    if _llm is None:
+        _llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.0)
+    return _llm
 
 
 def format_history(messages: list, max_turns: int = 6) -> str:

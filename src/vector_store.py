@@ -5,14 +5,22 @@ import chromadb
 
 CHROMA_PERSIST_DIR = "chroma_db"
 COLLECTION_NAME = "rag_documents"
+_embeddings = None
+_chroma_client = None
 
 
 def get_embeddings():
-    return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    global _embeddings
+    if _embeddings is None:
+        _embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    return _embeddings
 
 
 def get_chroma_client():
-    return chromadb.PersistentClient(path=CHROMA_PERSIST_DIR)
+    global _chroma_client
+    if _chroma_client is None:
+        _chroma_client = chromadb.PersistentClient(path=CHROMA_PERSIST_DIR)
+    return _chroma_client
 
 
 def get_or_create_collection() -> chromadb.Collection:

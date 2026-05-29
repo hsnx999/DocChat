@@ -34,6 +34,12 @@ if "collection" not in st.session_state:
     st.session_state.collection = get_or_create_collection()
 if "processed_files" not in st.session_state:
     st.session_state.processed_files = set()
+if "indexed_files" not in st.session_state:
+    st.session_state.indexed_files = get_indexed_files(st.session_state.collection)
+
+
+def refresh_indexed_files():
+    st.session_state.indexed_files = get_indexed_files(st.session_state.collection)
 
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
@@ -55,6 +61,7 @@ with st.sidebar:
                     st.session_state.messages = []
                     st.session_state.processed_files.add(uploaded_file.name)
                     st.success(f"✓ {uploaded_file.name} added")
+                    refresh_indexed_files()
                 except ValueError as e:
                     st.error(str(e))
                 except Exception as e:
@@ -63,7 +70,7 @@ with st.sidebar:
             st.info(f"{uploaded_file.name} is already indexed.")
 
     st.divider()
-    indexed_files = get_indexed_files(st.session_state.collection)
+    indexed_files = st.session_state.indexed_files
 
     if indexed_files:
         st.markdown("**Indexed documents:**")
@@ -74,6 +81,7 @@ with st.sidebar:
                 remove_document(st.session_state.collection, fname)
                 st.session_state.messages = []
                 st.session_state.processed_files.discard(fname)
+                refresh_indexed_files()
                 st.rerun()
     else:
         st.info("No documents indexed yet.")
@@ -85,11 +93,12 @@ with st.sidebar:
                 remove_document(st.session_state.collection, fname)
             st.session_state.messages = []
             st.session_state.processed_files.clear()
+            refresh_indexed_files()
             st.rerun()
 
 
 # ── Main chat area ─────────────────────────────────────────────────────────
-indexed_files = get_indexed_files(st.session_state.collection)
+indexed_files = st.session_state.indexed_files
 
 if not indexed_files:
     st.info("👈 Upload one or more PDFs in the sidebar to get started.")
