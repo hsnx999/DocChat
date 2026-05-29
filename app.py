@@ -8,6 +8,7 @@ from src.vector_store import (
     add_documents,
     remove_document,
     get_indexed_files,
+    query_vector_store,
 )
 from src.rag_chain import answer_question
 import os
@@ -93,13 +94,15 @@ with st.sidebar:
 
     if indexed_files:
         st.divider()
-        if st.button("Clear all documents", use_container_width=True):
-            for fname in indexed_files:
-                remove_document(st.session_state.collection, fname)
-            st.session_state.messages = []
-            st.session_state.processed_files.clear()
-            refresh_indexed_files()
-            st.rerun()
+        with st.popover("Clear all documents", use_container_width=True):
+            st.warning("This will permanently delete all indexed documents.")
+            if st.button("Yes, clear everything"):
+                for fname in indexed_files:
+                    remove_document(st.session_state.collection, fname)
+                st.session_state.messages = []
+                st.session_state.processed_files.clear()
+                refresh_indexed_files()
+                st.rerun()
 
 
 # ── Main chat area ─────────────────────────────────────────────────────────
@@ -122,6 +125,7 @@ else:
         with st.chat_message("assistant"):
             placeholder = st.empty()
             full_response = ""
+            placeholder.markdown("Thinking...")
 
             try:
                 for token in answer_question(
@@ -137,7 +141,24 @@ else:
             finally:
                 placeholder.markdown(full_response)
 
+            if indexed_files:
+                with st.expander("Sources"):
+                    try:
+                        source_docs = query_vector_store(
+                            st.session_state.collection, question, k=3
+                        )
+                        for i, doc in enumerate(source_docs):
+                            filename = doc.metadata.get("source", "document")
+                            page = doc.metadata.get("page", "?")
+                            st.markdown(f"**{i+1}. {filename} (page {page})**")
+                            st.caption(doc.page_content[:300])
+                    except Exception:
+                        pass
+
         st.session_state.messages.append({
             "role": "assistant",
             "content": full_response,
         })
+
+        if len(st.session_state.messages) > 100:
+            st.session_state.messages = st.session_state.messages[-100:]
