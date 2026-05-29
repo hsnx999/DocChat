@@ -70,6 +70,7 @@ boundaries are never missed.
 ## Evaluation Results (RAGAS)
 
 <!-- EVAL_SCORES -->
+<!-- END_EVAL_SCORES -->
 
 Run the evaluation yourself on any document:
 

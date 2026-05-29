@@ -54,17 +54,7 @@ jobs:
           FAITH=$(grep -oP 'Faithfulness:\s+\K[\d.]+' eval_output.txt || echo "n/a")
           RELEV=$(grep -oP 'Answer Relevancy:\s+\K[\d.]+' eval_output.txt || echo "n/a")
           PREC=$(grep -oP 'Context Precision:\s+\K[\d.]+' eval_output.txt || echo "n/a")
-          cat > /tmp/scores.md << EOF
-          | Metric | Score |
-          |---|---|
-          | Faithfulness | $FAITH |
-          | Answer Relevancy | $RELEV |
-          | Context Precision | $PREC |
-
-          _Latest run: $(date -u '+%Y-%m-%d %H:%M UTC')_
-          EOF
-          SCORES=$(cat /tmp/scores.md | sed ':a;N;$!ba;s/\n/\\n/g')
-          sed -i "s|<!-- EVAL_SCORES -->|$SCORES|" README.md
+          python3 scripts/update_readme_scores.py "$FAITH" "$RELEV" "$PREC"
 
       - name: Commit updated README
         run: |
