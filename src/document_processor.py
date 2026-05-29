@@ -109,7 +109,7 @@ def process_uploaded_file(uploaded_file, save_dir: str = "data") -> List[Documen
     save_path = Path(save_dir)
     save_path.mkdir(parents=True, exist_ok=True)
 
-    file_path = save_path / uploaded_file.name
+    file_path = save_path / Path(uploaded_file.name).name
     raw_bytes = uploaded_file.read()
 
     ext = Path(uploaded_file.name).suffix.lower()

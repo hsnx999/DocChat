@@ -14,6 +14,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
 
 from datasets import Dataset
+from src.settings import LLM_MODEL, EMBEDDING_MODEL, RETRIEVE_K
 from ragas import evaluate
 from ragas.metrics import faithfulness, answer_relevancy, context_precision
 from ragas.run_config import RunConfig
@@ -90,7 +91,7 @@ def find_pdf() -> tuple[str, str]:
 
 def run_pipeline(collection, question: str) -> tuple[str, list[str]]:
     """Run one question through the full RAG pipeline."""
-    docs = query_vector_store(collection, question, k=4)
+    docs = query_vector_store(collection, question, k=RETRIEVE_K)
     contexts = [doc.page_content for doc in docs]
     full_answer = ""
     for token in answer_question(collection, question, chat_history=[]):
@@ -151,10 +152,10 @@ def main():
     })
 
     llm = LangchainLLMWrapper(
-        ChatGroq(model="llama-3.1-8b-instant", temperature=0.0)
+        ChatGroq(model=LLM_MODEL, temperature=0.0)
     )
     embeddings = LangchainEmbeddingsWrapper(
-        HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
     )
 
     results = evaluate(

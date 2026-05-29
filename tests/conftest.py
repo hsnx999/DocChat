@@ -1,4 +1,5 @@
 import pytest
+from typing import List
 from langchain.schema import Document
 
 
@@ -11,7 +12,7 @@ def sample_doc() -> Document:
 
 
 @pytest.fixture
-def sample_chunks() -> list[Document]:
+def sample_chunks() -> List[Document]:
     return [
         Document(
             page_content="Machine learning is a subset of artificial intelligence.",

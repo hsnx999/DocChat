@@ -18,6 +18,23 @@ from pathlib import Path
 import logging
 logger = logging.getLogger(__name__)
 
+CHAT_HISTORY_FILE = Path("data/chat_history.json")
+
+
+def _load_chat():
+    if CHAT_HISTORY_FILE.exists():
+        try:
+            data = json.loads(CHAT_HISTORY_FILE.read_text())
+            if isinstance(data, list):
+                st.session_state.messages = data
+        except Exception:
+            pass
+
+
+def _save_chat():
+    CHAT_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CHAT_HISTORY_FILE.write_text(json.dumps(st.session_state.messages, indent=2))
+
 
 st.set_page_config(page_title="DocChat", page_icon="📄")
 st.title("📄 DocChat")
@@ -30,7 +47,6 @@ if "GROQ_API_KEY" not in os.environ:
         "Add it to your .env file or environment variables, then restart the app."
     )
     st.stop()
-
 
 
 # ── Session state ──────────────────────────────────────────────────────────
@@ -51,22 +67,6 @@ if "selected_docs" not in st.session_state:
 
 def refresh_indexed_files():
     st.session_state.indexed_files = get_indexed_files(st.session_state.collection)
-
-
-CHAT_HISTORY_FILE = Path("data/chat_history.json")
-
-def _load_chat():
-    if CHAT_HISTORY_FILE.exists():
-        try:
-            data = json.loads(CHAT_HISTORY_FILE.read_text())
-            if isinstance(data, list):
-                st.session_state.messages = data
-        except Exception:
-            pass
-
-def _save_chat():
-    CHAT_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CHAT_HISTORY_FILE.write_text(json.dumps(st.session_state.messages, indent=2))
 
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
@@ -109,8 +109,6 @@ with st.sidebar:
             if col2.button("✕", key=f"remove_{fname}"):
                 remove_document(st.session_state.collection, fname)
                 st.session_state.messages = []
-                if CHAT_HISTORY_FILE.exists():
-                    CHAT_HISTORY_FILE.unlink()
                 st.session_state.processed_files.discard(fname)
                 refresh_indexed_files()
                 st.rerun()
@@ -125,8 +123,6 @@ with st.sidebar:
                 for fname in indexed_files:
                     remove_document(st.session_state.collection, fname)
                 st.session_state.messages = []
-                if CHAT_HISTORY_FILE.exists():
-                    CHAT_HISTORY_FILE.unlink()
                 st.session_state.processed_files.clear()
                 refresh_indexed_files()
                 st.rerun()
@@ -197,8 +193,6 @@ else:
                 with fcol3:
                     if st.button("Delete", key=f"del_{i}"):
                         st.session_state.messages = st.session_state.messages[:i]
-                        if CHAT_HISTORY_FILE.exists():
-                            CHAT_HISTORY_FILE.unlink()
                         _save_chat()
                         st.rerun()
 
