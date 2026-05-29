@@ -1,0 +1,14 @@
+.git/
+.gitignore
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+README.md
+tests/
+.opencode/
+opencode.json
+AGENTS.md
+chroma_db/
+data/

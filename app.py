@@ -12,6 +12,8 @@ from src.vector_store import (
 )
 from src.rag_chain import answer_question
 import os
+import json
+from pathlib import Path
 
 import logging
 logger = logging.getLogger(__name__)
@@ -34,6 +36,9 @@ if "GROQ_API_KEY" not in os.environ:
 # ── Session state ──────────────────────────────────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "chat_loaded" not in st.session_state:
+    _load_chat()
+    st.session_state.chat_loaded = True
 if "collection" not in st.session_state:
     st.session_state.collection = get_or_create_collection()
 if "processed_files" not in st.session_state:
@@ -46,6 +51,22 @@ if "selected_docs" not in st.session_state:
 
 def refresh_indexed_files():
     st.session_state.indexed_files = get_indexed_files(st.session_state.collection)
+
+
+CHAT_HISTORY_FILE = Path("data/chat_history.json")
+
+def _load_chat():
+    if CHAT_HISTORY_FILE.exists():
+        try:
+            data = json.loads(CHAT_HISTORY_FILE.read_text())
+            if isinstance(data, list):
+                st.session_state.messages = data
+        except Exception:
+            pass
+
+def _save_chat():
+    CHAT_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CHAT_HISTORY_FILE.write_text(json.dumps(st.session_state.messages, indent=2))
 
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
@@ -88,6 +109,8 @@ with st.sidebar:
             if col2.button("✕", key=f"remove_{fname}"):
                 remove_document(st.session_state.collection, fname)
                 st.session_state.messages = []
+                if CHAT_HISTORY_FILE.exists():
+                    CHAT_HISTORY_FILE.unlink()
                 st.session_state.processed_files.discard(fname)
                 refresh_indexed_files()
                 st.rerun()
@@ -102,6 +125,8 @@ with st.sidebar:
                 for fname in indexed_files:
                     remove_document(st.session_state.collection, fname)
                 st.session_state.messages = []
+                if CHAT_HISTORY_FILE.exists():
+                    CHAT_HISTORY_FILE.unlink()
                 st.session_state.processed_files.clear()
                 refresh_indexed_files()
                 st.rerun()
@@ -124,9 +149,58 @@ if not indexed_files:
 else:
     st.caption(f"Searching across: {', '.join(indexed_files)}")
 
-    for msg in st.session_state.messages:
+    for i, msg in enumerate(st.session_state.messages):
         with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+            if msg["role"] == "user":
+                col1, col2 = st.columns([10, 1])
+                with col1:
+                    if st.session_state.get(f"editing_{i}"):
+                        new_content = st.text_area(
+                            "Edit message",
+                            msg["content"],
+                            key=f"edit_input_{i}",
+                            label_visibility="collapsed",
+                        )
+                        save_col, cancel_col = st.columns([1, 1])
+                        with save_col:
+                            if st.button("Save", key=f"save_{i}"):
+                                st.session_state.messages[i]["content"] = new_content
+                                st.session_state[f"editing_{i}"] = False
+                                _save_chat()
+                                st.rerun()
+                        with cancel_col:
+                            if st.button("Cancel", key=f"cancel_{i}"):
+                                st.session_state[f"editing_{i}"] = False
+                                st.rerun()
+                    else:
+                        st.markdown(msg["content"])
+                with col2:
+                    if st.button("✎", key=f"edit_btn_{i}"):
+                        st.session_state[f"editing_{i}"] = True
+                        st.rerun()
+            else:
+                st.markdown(msg["content"])
+                feedback = msg.get("feedback")
+                fcol1, fcol2, fcol3 = st.columns([1, 1, 10])
+                with fcol1:
+                    up_disabled = feedback is not None
+                    if st.button("👍", key=f"up_{i}", disabled=up_disabled):
+                        st.session_state.messages[i]["feedback"] = "up"
+                        _save_chat()
+                        st.rerun()
+                with fcol2:
+                    down_disabled = feedback is not None
+                    if st.button("👎", key=f"down_{i}", disabled=down_disabled):
+                        st.session_state.messages[i]["feedback"] = "down"
+                        _save_chat()
+                        st.rerun()
+                with fcol3:
+                    if st.button("Delete", key=f"del_{i}"):
+                        st.session_state.messages = st.session_state.messages[:i]
+                        if CHAT_HISTORY_FILE.exists():
+                            CHAT_HISTORY_FILE.unlink()
+                        _save_chat()
+                        st.rerun()
 
     if question := st.chat_input("Ask something about your documents…"):
         st.session_state.messages.append({"role": "user", "content": question})
@@ -171,6 +245,7 @@ else:
             "role": "assistant",
             "content": full_response,
         })
+        _save_chat()
 
         if len(st.session_state.messages) > 100:
             st.session_state.messages = st.session_state.messages[-100:]
