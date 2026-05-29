@@ -70,6 +70,13 @@ boundaries are never missed.
 ## Evaluation Results (RAGAS)
 
 <!-- EVAL_SCORES -->
+| Metric | Score |
+|---|---|---|
+| Faithfulness | 0.889 |
+| Answer Relevancy | 0.734 |
+| Context Precision | 0.571 |
+
+_Latest run: 2026-05-29 23:39 UTC_
 <!-- END_EVAL_SCORES -->
 
 Run the evaluation yourself on any document:
