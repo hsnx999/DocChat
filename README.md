@@ -10,6 +10,7 @@ Built from scratch as a portfolio project to learn production RAG architecture.
 
 🔗 **[Live Demo →](https://hsnx999-rag-chatbot.streamlit.app)**
 
+![CI](https://github.com/hsnx999/rag-chatbot/actions/workflows/eval.yml/badge.svg)
 ---
 
 ## Features
@@ -67,6 +68,8 @@ boundaries are never missed.
 ---
 
 ## Evaluation Results (RAGAS)
+
+<!-- EVAL_SCORES -->
 
 Run the evaluation yourself on any document:
 

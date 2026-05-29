@@ -3,8 +3,6 @@ name: Evaluate
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   test-and-eval:
@@ -24,16 +22,54 @@ jobs:
       - name: Run unit tests
         run: python -m pytest tests/ -v
 
-      - name: Set up sample PDF for evaluation
-        run: mkdir -p data && cp tests/fixtures/sample.pdf data/
+      - name: Generate sample PDF
+        run: |
+          mkdir -p data
+          python << 'PYEOF'
+          from fpdf import FPDF
+          pdf = FPDF()
+          pdf.add_page()
+          pdf.set_font('Helvetica', size=11)
+          lines = [
+              'Hassan Sharif - Software Engineer Resume',
+              'Python, JavaScript, TypeScript, C++, Ruby, HTML/CSS',
+              'University of Lahore - BS Software Engineering 2021-2025',
+              'Ruby on Rails Intern at Inteldevs, Lahore',
+              'AI: PyTorch, LangChain, ChromaDB, HuggingFace, Scikit-learn',
+              'Databases: MySQL, PostgreSQL, MongoDB',
+          ]
+          for line in lines:
+              pdf.cell(0, 10, text=line, new_x='LMARGIN', new_y='NEXT')
+          pdf.output('data/sample.pdf')
+          print('Generated data/sample.pdf')
+          PYEOF
 
       - name: Run RAGAS evaluation
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python evaluate.py 2>&1 | tee eval_output.txt
 
-      - name: Upload evaluation results
-        uses: actions/upload-artifact@v4
-        with:
-          name: eval-results
-          path: eval_output.txt
+      - name: Parse scores and update README
+        run: |
+          FAITH=$(grep -oP 'Faithfulness:\s+\K[\d.]+' eval_output.txt || echo "n/a")
+          RELEV=$(grep -oP 'Answer Relevancy:\s+\K[\d.]+' eval_output.txt || echo "n/a")
+          PREC=$(grep -oP 'Context Precision:\s+\K[\d.]+' eval_output.txt || echo "n/a")
+          cat > /tmp/scores.md << EOF
+          | Metric | Score |
+          |---|---|
+          | Faithfulness | $FAITH |
+          | Answer Relevancy | $RELEV |
+          | Context Precision | $PREC |
+
+          _Latest run: $(date -u '+%Y-%m-%d %H:%M UTC')_
+          EOF
+          SCORES=$(cat /tmp/scores.md | sed ':a;N;$!ba;s/\n/\\n/g')
+          sed -i "s|<!-- EVAL_SCORES -->|$SCORES|" README.md
+
+      - name: Commit updated README
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add README.md
+          git diff --cached --quiet || git commit -m "docs: update RAGAS scores [skip ci]"
+          git push
