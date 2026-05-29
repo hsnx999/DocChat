@@ -38,8 +38,6 @@ def add_documents(
 
     Returns the number of chunks added.
     """
-    embeddings_model = get_embeddings()
-
     texts     = [chunk.page_content for chunk in chunks]
     # Use filename as the source tag — clean and readable
     metadatas = [{**chunk.metadata, "source": filename} for chunk in chunks]
@@ -47,14 +45,18 @@ def add_documents(
     # Prefix with filename to avoid collisions across docs
     ids = [f"{filename}_chunk_{i}" for i in range(len(chunks))]
 
-    vectors = embeddings_model.embed_documents(texts)
+    try:
+        embeddings_model = get_embeddings()
+        vectors = embeddings_model.embed_documents(texts)
+        collection.add(
+            documents=texts,
+            embeddings=vectors,
+            metadatas=metadatas,
+            ids=ids,
+        )
+    except Exception as e:
+        raise RuntimeError(f"Failed to index document '{filename}': {e}")
 
-    collection.add(
-        documents=texts,
-        embeddings=vectors,
-        metadatas=metadatas,
-        ids=ids,
-    )
     return len(chunks)
 
 
@@ -63,16 +65,23 @@ def remove_document(collection: chromadb.Collection, filename: str):
     Delete all chunks belonging to a specific file.
     ChromaDB supports filtering deletes by metadata.
     """
-    collection.delete(where={"source": filename})
+    try:
+        collection.delete(where={"source": filename})
+    except Exception as e:
+        raise RuntimeError(f"Failed to remove document '{filename}': {e}")
 
 
 def get_indexed_files(collection: chromadb.Collection) -> list[str]:
     """
     Return a list of unique filenames currently in the collection.
     """
-    if collection.count() == 0:
-        return []
-    results = collection.get(include=["metadatas"])
+    try:
+        if collection.count() == 0:
+            return []
+        results = collection.get(include=["metadatas"])
+    except Exception as e:
+        raise RuntimeError(f"Failed to list indexed files: {e}")
+
     seen = set()
     for meta in results["metadatas"]:
         if "source" in meta:
@@ -88,18 +97,21 @@ def query_vector_store(
     """
     Embed the query and find the k most similar chunks across all documents.
     """
-    embeddings_model = get_embeddings()
-    query_vector = embeddings_model.embed_query(query)
+    try:
+        embeddings_model = get_embeddings()
+        query_vector = embeddings_model.embed_query(query)
 
-    # Cap k at the number of chunks in the collection
-    n = min(k, collection.count())
-    if n == 0:
-        return []
+        # Cap k at the number of chunks in the collection
+        n = min(k, collection.count())
+        if n == 0:
+            return []
 
-    results = collection.query(
-        query_embeddings=[query_vector],
-        n_results=n,
-    )
+        results = collection.query(
+            query_embeddings=[query_vector],
+            n_results=n,
+        )
+    except Exception as e:
+        raise RuntimeError(f"Failed to query vector store: {e}")
 
     docs = []
     for text, metadata in zip(results["documents"][0], results["metadatas"][0]):

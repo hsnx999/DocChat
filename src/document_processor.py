@@ -15,9 +15,17 @@ def load_pdf(file_path: str) -> List[Document]:
       - page_content: the raw text of that page
       - metadata: dict with info like {"page": 3, "source": "paper.pdf"}
     """
-    loader = PyPDFLoader(file_path)
-    pages = loader.load()
-    return pages
+    try:
+        loader = PyPDFLoader(file_path)
+        pages = loader.load()
+        return pages
+    except Exception as e:
+        msg = str(e).lower()
+        if "encrypted" in msg:
+            raise ValueError("The PDF is encrypted and cannot be read.")
+        if "cannot read" in msg or "no such file" in msg:
+            raise ValueError(f"Cannot read the file: {file_path}")
+        raise ValueError(f"Failed to load PDF: {e}")
 
 def chunk_documents(
     documents: List[Document],

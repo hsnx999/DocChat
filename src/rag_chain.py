@@ -74,6 +74,7 @@ def condense_question(question: str, history: list) -> str:
     """
     If there's no history, return the question as-is.
     Otherwise ask the LLM to rewrite it as a standalone question.
+    If the LLM call fails, return the original question as fallback.
     """
     if not history:
         return question
@@ -84,8 +85,11 @@ def condense_question(question: str, history: list) -> str:
         question=question,
     )
     llm = get_llm()
-    response = llm.invoke(prompt)
-    return response.content.strip()
+    try:
+        response = llm.invoke(prompt)
+        return response.content.strip()
+    except Exception:
+        return question
 
 
 

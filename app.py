@@ -10,11 +10,21 @@ from src.vector_store import (
     get_indexed_files,
 )
 from src.rag_chain import answer_question
+import os
 
 
 st.set_page_config(page_title="DocChat", page_icon="📄")
 st.title("📄 DocChat")
 st.caption("Upload PDFs and ask questions across all of them — powered by RAG + LLaMA 3")
+
+# ── Startup validation ─────────────────────────────────────────────────────
+if "GROQ_API_KEY" not in os.environ:
+    st.error(
+        "GROQ_API_KEY is not set. "
+        "Add it to your .env file or environment variables, then restart the app."
+    )
+    st.stop()
+
 
 
 # ── Session state ──────────────────────────────────────────────────────────
