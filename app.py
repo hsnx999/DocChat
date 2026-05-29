@@ -22,6 +22,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "collection" not in st.session_state:
     st.session_state.collection = get_or_create_collection()
+if "processed_files" not in st.session_state:
+    st.session_state.processed_files = set()
 
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
@@ -31,21 +33,25 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"])
 
     if uploaded_file:
-        indexed = get_indexed_files(st.session_state.collection)
-        if uploaded_file.name not in indexed:
+        if uploaded_file.name not in st.session_state.processed_files:
             with st.spinner(f"Embedding {uploaded_file.name}…"):
-                chunks = process_uploaded_file(uploaded_file)
-                add_documents(
-                    st.session_state.collection,
-                    chunks,
-                    filename=uploaded_file.name,
-                )
-                st.session_state.messages = []  # reset chat on new doc
-            st.success(f"✓ {uploaded_file.name} added")
+                try:
+                    chunks = process_uploaded_file(uploaded_file)
+                    add_documents(
+                        st.session_state.collection,
+                        chunks,
+                        filename=uploaded_file.name,
+                    )
+                    st.session_state.messages = []
+                    st.session_state.processed_files.add(uploaded_file.name)
+                    st.success(f"✓ {uploaded_file.name} added")
+                except ValueError as e:
+                    st.error(str(e))
+                except Exception as e:
+                    st.error(f"Failed to process {uploaded_file.name}: {e}")
         else:
             st.info(f"{uploaded_file.name} is already indexed.")
 
-    # Show all indexed files with a remove button for each
     st.divider()
     indexed_files = get_indexed_files(st.session_state.collection)
 
@@ -57,17 +63,18 @@ with st.sidebar:
             if col2.button("✕", key=f"remove_{fname}"):
                 remove_document(st.session_state.collection, fname)
                 st.session_state.messages = []
+                st.session_state.processed_files.discard(fname)
                 st.rerun()
     else:
         st.info("No documents indexed yet.")
 
-    # Clear everything button
     if indexed_files:
         st.divider()
         if st.button("Clear all documents", use_container_width=True):
             for fname in indexed_files:
                 remove_document(st.session_state.collection, fname)
             st.session_state.messages = []
+            st.session_state.processed_files.clear()
             st.rerun()
 
 
@@ -77,10 +84,8 @@ indexed_files = get_indexed_files(st.session_state.collection)
 if not indexed_files:
     st.info("👈 Upload one or more PDFs in the sidebar to get started.")
 else:
-    # Show which docs are active
     st.caption(f"Searching across: {', '.join(indexed_files)}")
 
-    # Render chat history
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
@@ -94,15 +99,18 @@ else:
             placeholder = st.empty()
             full_response = ""
 
-            for token in answer_question(
-                st.session_state.collection,
-                question,
-                st.session_state.messages,
-            ):
-                full_response += token
-                placeholder.markdown(full_response + "▌")
-
-            placeholder.markdown(full_response)
+            try:
+                for token in answer_question(
+                    st.session_state.collection,
+                    question,
+                    st.session_state.messages,
+                ):
+                    full_response += token
+                    placeholder.markdown(full_response + "▌")
+            except Exception as e:
+                full_response = f"Sorry, something went wrong: {e}"
+            finally:
+                placeholder.markdown(full_response)
 
         st.session_state.messages.append({
             "role": "assistant",

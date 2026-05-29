@@ -5,6 +5,8 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+
 def load_pdf(file_path: str) -> List[Document]:
     """
     Load a PDF from disk.
@@ -44,13 +46,28 @@ def process_uploaded_file(uploaded_file, save_dir: str = "data") -> List[Documen
     """
     Accept a Streamlit UploadedFile, save it to disk, then load and chunk it.
     """
-    from pathlib import Path
+    if uploaded_file.size > MAX_FILE_SIZE:
+        raise ValueError(
+            f"File size ({uploaded_file.size / 1024 / 1024:.1f} MB) exceeds "
+            f"the maximum allowed size of {MAX_FILE_SIZE / 1024 / 1024:.0f} MB."
+        )
+
     save_path = Path(save_dir)
     save_path.mkdir(parents=True, exist_ok=True)
 
     file_path = save_path / uploaded_file.name
-    file_path.write_bytes(uploaded_file.read())
+    raw_bytes = uploaded_file.read()
 
-    pages = load_pdf(str(file_path))
-    chunks = chunk_documents(pages)
+    if raw_bytes[:4] != b"%PDF":
+        raise ValueError("The uploaded file is not a valid PDF (missing %PDF header).")
+
+    file_path.write_bytes(raw_bytes)
+
+    try:
+        pages = load_pdf(str(file_path))
+        chunks = chunk_documents(pages)
+    except Exception:
+        file_path.unlink()
+        raise
+
     return chunks
