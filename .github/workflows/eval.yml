@@ -33,12 +33,29 @@ jobs:
           pdf.add_page()
           pdf.set_font('Helvetica', size=11)
           lines = [
-              'Hassan Sharif - Software Engineer Resume',
-              'Python, JavaScript, TypeScript, C++, Ruby, HTML/CSS',
-              'University of Lahore - BS Software Engineering 2021-2025',
-              'Ruby on Rails Intern at Inteldevs, Lahore',
-              'AI: PyTorch, LangChain, ChromaDB, HuggingFace, Scikit-learn',
-              'Databases: MySQL, PostgreSQL, MongoDB',
+              'RAG Architecture: A Technical Overview',
+              '',
+              'Retrieval-Augmented Generation combines vector search with LLM generation.',
+              'The system indexes documents by chunking them into 1000-character segments',
+              'with 200-character overlap. Each chunk is embedded using all-MiniLM-L6-v2',
+              'into a 384-dimensional vector and stored in ChromaDB.',
+              '',
+              'At query time, the question is condensed against conversation history,',
+              'then embedded and searched against ChromaDB. Retrieved chunks are re-ranked',
+              'using a cross-encoder model before being sent to LLaMA 3.1 via Groq API.',
+              '',
+              'The tech stack includes Python, TypeScript, LangChain for orchestration,',
+              'HuggingFace for embeddings, and Streamlit for the UI. The project was',
+              'developed by a team at the AI Research Lab, established in 2022.',
+              '',
+              'Key frameworks: LangChain, ChromaDB, HuggingFace, Sentence Transformers,',
+              'Cross-Encoders, PyTorch.',
+              '',
+              'Databases used: ChromaDB for vector storage, PostgreSQL for metadata,',
+              'MongoDB for logging, Redis for caching.',
+              '',
+              'The evaluation tool uses FastAPI for the backend API, React for the',
+              'frontend dashboard, Streamlit for prototyping, and Python.',
           ]
           for line in lines:
               pdf.cell(0, 10, text=line, new_x='LMARGIN', new_y='NEXT')

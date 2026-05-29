@@ -67,7 +67,13 @@ boundaries are never missed.
 
 ---
 
-## Evaluation Results (RAGAS)
+## Evaluation Results
+
+| Metric | Ideal Range | What it measures |
+|---|---|---|
+| **Faithfulness** | ≥ 0.80 | Whether answers stay true to the source document |
+| **Answer Relevancy** | ≥ 0.70 | Whether answers actually address the question asked |
+| **Context Precision** | ≥ 0.70 | Whether the retrieved context is relevant and concise |
 
 <!-- EVAL_SCORES -->
 | Metric | Score |
@@ -79,11 +85,14 @@ boundaries are never missed.
 _Latest run: 2026-05-29 23:39 UTC_
 <!-- END_EVAL_SCORES -->
 
-Run the evaluation yourself on any document:
+Run the evaluation yourself:
 
     python evaluate.py
 
-Results will vary depending on the document and questions in `evaluate.py`.
+Test cases cover RAG architecture concepts. Swap the PDF and questions to score your own document.
+
+[![CI](https://github.com/hsnx999/rag-chatbot/actions/workflows/eval.yml/badge.svg)](https://github.com/hsnx999/rag-chatbot/actions/workflows/eval.yml)
+
 
 ---
 

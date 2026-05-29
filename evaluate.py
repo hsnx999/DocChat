@@ -34,37 +34,36 @@ from src.rag_chain import answer_question
 
 
 # ── Test questions ─────────────────────────────────────────────────────────────
-# These are intentionally generic so they work on any resume PDF.
-# If you run this against a non-resume document, update the questions
-# and ground_truth values to match that document's content.
+# Test questions covering the content in the sample "RAG Architecture" PDF.
+# Update these if you change the document used for evaluation.
 TEST_CASES = [
     {
-        "question": "What programming languages does Hassan know?",
-        "ground_truth": "Hassan knows Python, JavaScript, TypeScript, C++, Ruby, and HTML/CSS.",
+        "question": "What programming languages are used in the tech stack?",
+        "ground_truth": "The tech stack includes Python, TypeScript, and uses LangChain, HuggingFace, and Streamlit.",
     },
     {
-        "question": "What is Hassan's educational background?",
-        "ground_truth": "Hassan has a Bachelor of Science in Software Engineering from the University of Lahore, completed between 2021 and 2025.",
+        "question": "What is the background of the team that developed the project?",
+        "ground_truth": "The project was developed by a team at the AI Research Lab, established in 2022, which has published papers on efficient RAG retrieval.",
     },
     {
-        "question": "What was Hassan's internship experience?",
-        "ground_truth": "Hassan worked as a Ruby on Rails Intern at Inteldevs in Lahore, Pakistan from June to September 2024.",
+        "question": "What project is described in the document?",
+        "ground_truth": "The document describes a RAG-based document Q&A system that uses vector search with LLM generation.",
     },
     {
-        "question": "What AI frameworks does Hassan have experience with?",
-        "ground_truth": "Hassan has experience with PyTorch, LangChain, ChromaDB, HuggingFace, Scikit-learn, and OpenCV.",
+        "question": "What AI frameworks are mentioned?",
+        "ground_truth": "The document mentions LangChain, ChromaDB, HuggingFace, Sentence Transformers, Cross-Encoders, and PyTorch.",
     },
     {
-        "question": "Describe the DocChat project.",
-        "ground_truth": "DocChat is a RAG-powered document Q&A chatbot built with LangChain, ChromaDB, HuggingFace embeddings, Groq LLaMA 3, and Streamlit, deployed live on Streamlit Cloud.",
+        "question": "How does the document indexing process work?",
+        "ground_truth": "Documents are chunked into 1000-character segments with 200-character overlap, embedded using all-MiniLM-L6-v2 into a 384-dimensional vector, and stored in ChromaDB.",
     },
     {
-        "question": "What databases does Hassan know?",
-        "ground_truth": "Hassan knows MySQL, PostgreSQL, and MongoDB.",
+        "question": "What databases are mentioned?",
+        "ground_truth": "The databases mentioned are ChromaDB for vector storage, PostgreSQL for metadata, MongoDB for logging, and Redis for caching.",
     },
     {
-        "question": "What was the tech stack for the AI Diagnostic Tool?",
-        "ground_truth": "The AI Diagnostic Tool used React, FastAPI, CNNs, NLP, Supabase, and Python.",
+        "question": "What is the tech stack for the evaluation tool?",
+        "ground_truth": "The evaluation tool uses FastAPI for the backend API, React for the frontend dashboard, Streamlit for prototyping, and Python.",
     },
 ]
 

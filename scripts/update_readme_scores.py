@@ -8,12 +8,13 @@ prec  = sys.argv[3] if len(sys.argv) > 3 else "n/a"
 now   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
 scores = (
+    f"**RAGAS Evaluation** — updated {now}\n\n"
     f"| Metric | Score |\n"
-    f"|---|---|---|\n"
+    f"|---|---|\n"
     f"| Faithfulness | {faith} |\n"
     f"| Answer Relevancy | {relev} |\n"
     f"| Context Precision | {prec} |\n"
-    f"\n_Latest run: {now}_\n"
+    f"\n_Higher is better (0.0 – 1.0). Run `python evaluate.py` to re-score on your own document._\n"
 )
 
 with open("README.md") as f:
