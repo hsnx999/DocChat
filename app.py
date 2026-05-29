@@ -9,22 +9,42 @@ from src.vector_store import (
     remove_document,
     get_indexed_files,
     query_vector_store,
+    delete_collection,
+    list_session_collections,
 )
 from src.rag_chain import answer_question
+from src.settings import SESSION_CLEANUP_AGE_HOURS
 import os
 import json
+import uuid
+import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 
 import logging
 logger = logging.getLogger(__name__)
 
-CHAT_HISTORY_FILE = Path("data/chat_history.json")
+BASE_DATA_DIR = Path("data")
+
+
+def _chat_history_file() -> Path:
+    return BASE_DATA_DIR / st.session_state.session_id / "chat_history.json"
+
+
+def _last_active_file() -> Path:
+    return BASE_DATA_DIR / st.session_state.session_id / ".last_active"
+
+
+def _touch_last_active():
+    _last_active_file().parent.mkdir(parents=True, exist_ok=True)
+    _last_active_file().write_text(datetime.now(timezone.utc).isoformat())
 
 
 def _load_chat():
-    if CHAT_HISTORY_FILE.exists():
+    f = _chat_history_file()
+    if f.exists():
         try:
-            data = json.loads(CHAT_HISTORY_FILE.read_text())
+            data = json.loads(f.read_text())
             if isinstance(data, list):
                 st.session_state.messages = data
         except Exception:
@@ -32,8 +52,38 @@ def _load_chat():
 
 
 def _save_chat():
-    CHAT_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CHAT_HISTORY_FILE.write_text(json.dumps(st.session_state.messages, indent=2))
+    f = _chat_history_file()
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps(st.session_state.messages, indent=2))
+    _touch_last_active()
+
+
+def _cleanup_stale_sessions():
+    """Delete sessions inactive for more than SESSION_CLEANUP_AGE_HOURS hours."""
+    if not BASE_DATA_DIR.exists():
+        return
+    cutoff = datetime.now(timezone.utc).timestamp() - SESSION_CLEANUP_AGE_HOURS * 3600
+    for d in BASE_DATA_DIR.iterdir():
+        if not d.is_dir():
+            continue
+        last_active_file = d / ".last_active"
+        if not last_active_file.exists():
+            continue
+        try:
+            ts = datetime.fromisoformat(last_active_file.read_text().strip()).timestamp()
+            if ts < cutoff:
+                sid = d.name
+                logger.info("Cleaning up stale session '%s'", sid)
+                delete_collection(f"session_{sid}")
+                shutil.rmtree(d, ignore_errors=True)
+        except Exception:
+            continue
+    # Orphan ChromaDB collections with no matching data dir
+    for col_name in list_session_collections():
+        sid = col_name.removeprefix("session_")
+        if not (BASE_DATA_DIR / sid).exists():
+            logger.info("Cleaning up orphan collection '%s'", col_name)
+            delete_collection(col_name)
 
 
 st.set_page_config(page_title="DocChat", page_icon="📄")
@@ -48,6 +98,14 @@ if "GROQ_API_KEY" not in os.environ:
     )
     st.stop()
 
+# ── Session ID ─────────────────────────────────────────────────────────────
+if "session_id" not in st.session_state:
+    sid = st.query_params.get("session_id", "")
+    if not sid or not sid.strip():
+        sid = str(uuid.uuid4())
+    st.session_state.session_id = sid
+    st.query_params["session_id"] = sid
+    _cleanup_stale_sessions()
 
 # ── Session state ──────────────────────────────────────────────────────────
 if "messages" not in st.session_state:
@@ -56,7 +114,7 @@ if "chat_loaded" not in st.session_state:
     _load_chat()
     st.session_state.chat_loaded = True
 if "collection" not in st.session_state:
-    st.session_state.collection = get_or_create_collection()
+    st.session_state.collection = get_or_create_collection(st.session_state.session_id)
 if "processed_files" not in st.session_state:
     st.session_state.processed_files = set()
 if "indexed_files" not in st.session_state:
@@ -79,7 +137,7 @@ with st.sidebar:
         if uploaded_file.name not in st.session_state.processed_files:
             with st.spinner(f"Embedding {uploaded_file.name}…"):
                 try:
-                    chunks = process_uploaded_file(uploaded_file)
+                    chunks = process_uploaded_file(uploaded_file, session_id=st.session_state.session_id)
                     add_documents(
                         st.session_state.collection,
                         chunks,

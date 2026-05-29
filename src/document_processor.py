@@ -95,9 +95,10 @@ def chunk_documents(
     return chunks
 
 
-def process_uploaded_file(uploaded_file, save_dir: str = "data") -> List[Document]:
+def process_uploaded_file(uploaded_file, save_dir: str = "data", session_id: str = "") -> List[Document]:
     """
     Accept a Streamlit UploadedFile, save it to disk, then load and chunk it.
+    If session_id is provided, files are stored in a session-scoped subdirectory.
     Supports: .pdf, .txt, .docx
     """
     if uploaded_file.size > MAX_FILE_SIZE:
@@ -107,6 +108,8 @@ def process_uploaded_file(uploaded_file, save_dir: str = "data") -> List[Documen
         )
 
     save_path = Path(save_dir)
+    if session_id:
+        save_path = save_path / session_id
     save_path.mkdir(parents=True, exist_ok=True)
 
     file_path = save_path / Path(uploaded_file.name).name

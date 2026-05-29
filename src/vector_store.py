@@ -24,15 +24,35 @@ def get_chroma_client():
     return _chroma_client
 
 
-def get_or_create_collection() -> chromadb.Collection:
+def get_or_create_collection(session_id: str = "") -> chromadb.Collection:
     """
     Get existing collection or create a fresh one.
-    Unlike before, we no longer delete it on every upload —
-    we accumulate documents across multiple uploads.
+    If a session_id is provided, use a session-scoped collection name.
+    Otherwise, use the default COLLECTION_NAME.
     """
     client = get_chroma_client()
-    collection = client.get_or_create_collection(COLLECTION_NAME)
+    name = f"session_{session_id}" if session_id else COLLECTION_NAME
+    collection = client.get_or_create_collection(name)
     return collection
+
+
+def delete_collection(name: str):
+    """Delete a collection by name. Silently ignore if not found."""
+    try:
+        client = get_chroma_client()
+        client.delete_collection(name)
+    except Exception:
+        logger.warning("Collection '%s' not found for deletion", name)
+
+
+def list_session_collections() -> List[str]:
+    """Return all collection names starting with 'session_'."""
+    client = get_chroma_client()
+    try:
+        return [c.name for c in client.list_collections() if c.name.startswith("session_")]
+    except Exception:
+        logger.exception("Failed to list collections")
+        return []
 
 
 def add_documents(
@@ -137,4 +157,3 @@ def query_vector_store(
     for text, metadata in zip(results["documents"][0], results["metadatas"][0]):
         docs.append(Document(page_content=text, metadata=metadata))
     return docs
-
