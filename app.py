@@ -90,6 +90,72 @@ st.set_page_config(page_title="DocChat", page_icon="📄")
 st.title("📄 DocChat")
 st.caption("Upload PDFs and ask questions across all of them — powered by RAG + LLaMA 3")
 
+st.markdown(
+    """
+<style>
+    /* Responsive viewport */
+    .main > div { max-width: 100%; padding: 0 0.5rem; }
+
+    /* Sidebar: collapse on narrow screens */
+    @media (max-width: 768px) {
+        section[data-testid="stSidebar"] {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+        }
+        section[data-testid="stSidebar"] > div:first-child {
+            padding: 0.5rem !important;
+        }
+        .main .block-container {
+            padding: 1rem 0.5rem !important;
+        }
+        button[kind="secondary"], button[kind="primary"] {
+            min-height: 44px !important;
+            font-size: 16px !important;
+        }
+        .st-emotion-cache-1v0mbdj {
+            font-size: 14px !important;
+        }
+        .st-emotion-cache-10trblm {
+            font-size: 14px !important;
+        }
+        .st-emotion-cache-1aehpvj {
+            font-size: 14px !important;
+        }
+        div[data-testid="stMarkdownContainer"] {
+            font-size: 15px !important;
+        }
+        .stChatInput textarea {
+            font-size: 16px !important;
+        }
+        div[data-testid="column"] button {
+            min-height: 44px !important;
+        }
+    }
+
+    /* Touch-friendly button sizing */
+    button {
+        min-height: 38px;
+    }
+    .stButton button {
+        width: 100%;
+    }
+    div[data-testid="column"] button {
+        min-width: 44px;
+    }
+
+    /* Source expander readable on mobile */
+    .streamlit-expanderContent {
+        font-size: 14px;
+    }
+    .streamlit-expanderContent p {
+        font-size: 14px;
+    }
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
 # ── Startup validation ─────────────────────────────────────────────────────
 if "GROQ_API_KEY" not in os.environ:
     st.error(
