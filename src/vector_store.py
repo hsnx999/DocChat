@@ -2,9 +2,10 @@ from typing import List, Optional
 from langchain.schema import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 import chromadb
+import logging
+from src.settings import CHROMA_PERSIST_DIR, COLLECTION_NAME, EMBEDDING_MODEL
 
-CHROMA_PERSIST_DIR = "chroma_db"
-COLLECTION_NAME = "rag_documents"
+logger = logging.getLogger(__name__)
 _embeddings = None
 _chroma_client = None
 
@@ -12,7 +13,7 @@ _chroma_client = None
 def get_embeddings():
     global _embeddings
     if _embeddings is None:
-        _embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        _embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
     return _embeddings
 
 
@@ -63,6 +64,7 @@ def add_documents(
             ids=ids,
         )
     except Exception as e:
+        logger.exception("Failed to index document '%s'", filename)
         raise RuntimeError(f"Failed to index document '{filename}': {e}")
 
     return len(chunks)
@@ -76,6 +78,7 @@ def remove_document(collection: chromadb.Collection, filename: str):
     try:
         collection.delete(where={"source": filename})
     except Exception as e:
+        logger.exception("Failed to remove document '%s'", filename)
         raise RuntimeError(f"Failed to remove document '{filename}': {e}")
 
 
@@ -88,6 +91,7 @@ def get_indexed_files(collection: chromadb.Collection) -> list[str]:
             return []
         results = collection.get(include=["metadatas"])
     except Exception as e:
+        logger.exception("Failed to list indexed files")
         raise RuntimeError(f"Failed to list indexed files: {e}")
 
     seen = set()
@@ -119,6 +123,7 @@ def query_vector_store(
             n_results=n,
         )
     except Exception as e:
+        logger.exception("Failed to query vector store")
         raise RuntimeError(f"Failed to query vector store: {e}")
 
     docs = []

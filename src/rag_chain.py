@@ -1,10 +1,15 @@
 from typing import Generator, List
+import logging
 import chromadb
 from langchain.schema import Document
 from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
 
 from src.vector_store import query_vector_store
+from src.settings import LLM_MODEL, LLM_TEMPERATURE, RETRIEVE_K, MAX_HISTORY_TURNS
+
+
+logger = logging.getLogger(__name__)
 
 
 # ── Prompt 1: condense the follow-up question ──────────────────────────────
@@ -46,11 +51,11 @@ _llm = None
 def get_llm():
     global _llm
     if _llm is None:
-        _llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.0)
+        _llm = ChatGroq(model=LLM_MODEL, temperature=LLM_TEMPERATURE)
     return _llm
 
 
-def format_history(messages: list, max_turns: int = 6) -> str:
+def format_history(messages: list, max_turns: int = MAX_HISTORY_TURNS) -> str:
     """
     Convert the last N messages into a readable string for the condense prompt.
     We cap at max_turns to avoid sending the entire history every time.
@@ -94,6 +99,7 @@ def condense_question(question: str, history: list) -> str:
         response = llm.invoke(prompt)
         return response.content.strip()
     except Exception:
+        logger.exception("Failed to condense question, using original")
         return question
 
 
@@ -144,7 +150,7 @@ def answer_question(
     standalone_question = condense_question(question, chat_history)
 
     # Step 2 — retrieve using the rewritten question
-    docs = query_vector_store(collection, standalone_question, k=4)
+    docs = query_vector_store(collection, standalone_question, k=RETRIEVE_K)
 
     # Step 3 — format context and build the answer prompt
     context = format_context(docs)

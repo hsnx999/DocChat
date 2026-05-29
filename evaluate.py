@@ -1,6 +1,4 @@
 import os
-os.environ["TRANSFORMERS_OFFLINE"] = "1"
-os.environ["HF_DATASETS_OFFLINE"] = "1"
 
 # evaluate.py
 # Run with: python evaluate.py
@@ -9,7 +7,12 @@ os.environ["HF_DATASETS_OFFLINE"] = "1"
 from dotenv import load_dotenv
 load_dotenv()
 
+import logging
 from pathlib import Path
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
+logger = logging.getLogger(__name__)
+
 from datasets import Dataset
 from ragas import evaluate
 from ragas.metrics import faithfulness, answer_relevancy, context_precision
@@ -96,17 +99,20 @@ def run_pipeline(collection, question: str) -> tuple[str, list[str]]:
 
 
 def main():
-    print("=" * 55)
-    print("  DocChat — RAGAS Evaluation")
-    print("=" * 55)
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    os.environ["HF_DATASETS_OFFLINE"] = "1"
+
+    logger.info("=" * 55)
+    logger.info("  DocChat — RAGAS Evaluation")
+    logger.info("=" * 55)
 
     # ── Auto-detect PDF ────────────────────────────────────
-    print("\n1. Finding document...")
+    logger.info("1. Finding document...")
     try:
         pdf_path, filename = find_pdf()
-        print(f"   Using: {filename}")
+        logger.info("   Using: %s", filename)
     except FileNotFoundError as e:
-        print(f"\n   ERROR: {e}")
+        logger.error("   ERROR: %s", e)
         return
 
     # ── Load into collection ───────────────────────────────
@@ -116,19 +122,19 @@ def main():
         pages  = load_pdf(pdf_path)
         chunks = chunk_documents(pages)
         add_documents(collection, chunks, filename=filename)
-        print(f"   Indexed {len(chunks)} chunks")
+        logger.info("   Indexed %d chunks", len(chunks))
     else:
-        print(f"   Already indexed — skipping embedding")
+        logger.info("   Already indexed — skipping embedding")
 
     # ── Run test cases ─────────────────────────────────────
-    print(f"\n2. Running {len(TEST_CASES)} test questions through pipeline...")
+    logger.info("2. Running %d test questions through pipeline...", len(TEST_CASES))
     questions     = []
     answers       = []
     contexts      = []
     ground_truths = []
 
     for i, case in enumerate(TEST_CASES, start=1):
-        print(f"   [{i}/{len(TEST_CASES)}] {case['question'][:55]}...")
+        logger.info("   [%d/%d] %s...", i, len(TEST_CASES), case['question'][:55])
         answer, context = run_pipeline(collection, case["question"])
         questions.append(case["question"])
         answers.append(answer)
@@ -136,7 +142,7 @@ def main():
         ground_truths.append(case["ground_truth"])
 
     # ── Score with RAGAS ───────────────────────────────────
-    print("\n3. Scoring with RAGAS (this takes ~8 minutes)...")
+    logger.info("3. Scoring with RAGAS (this takes ~8 minutes)...")
     dataset = Dataset.from_dict({
         "question":    questions,
         "answer":      answers,

@@ -12,6 +12,9 @@ from src.vector_store import (
 from src.rag_chain import answer_question
 import os
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 st.set_page_config(page_title="DocChat", page_icon="📄")
 st.title("📄 DocChat")
@@ -63,8 +66,10 @@ with st.sidebar:
                     st.success(f"✓ {uploaded_file.name} added")
                     refresh_indexed_files()
                 except ValueError as e:
+                    logger.exception("Upload validation failed")
                     st.error(str(e))
                 except Exception as e:
+                    logger.exception("Upload processing failed")
                     st.error(f"Failed to process {uploaded_file.name}: {e}")
         else:
             st.info(f"{uploaded_file.name} is already indexed.")
@@ -127,6 +132,7 @@ else:
                     full_response += token
                     placeholder.markdown(full_response + "▌")
             except Exception as e:
+                logger.exception("Question answering failed")
                 full_response = f"Sorry, something went wrong: {e}"
             finally:
                 placeholder.markdown(full_response)

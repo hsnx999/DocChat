@@ -1,11 +1,15 @@
 from pathlib import Path
 from typing import List
+import logging
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+from src.settings import CHUNK_SIZE, CHUNK_OVERLAP, MAX_FILE_SIZE
+
+logger = logging.getLogger(__name__)
+
 
 def load_pdf(file_path: str) -> List[Document]:
     """
@@ -22,15 +26,19 @@ def load_pdf(file_path: str) -> List[Document]:
     except Exception as e:
         msg = str(e).lower()
         if "encrypted" in msg:
+            logger.warning("Encrypted PDF attempted: %s", file_path)
             raise ValueError("The PDF is encrypted and cannot be read.")
         if "cannot read" in msg or "no such file" in msg:
+            logger.warning("Unreadable file: %s", file_path)
             raise ValueError(f"Cannot read the file: {file_path}")
+        logger.exception("Failed to load PDF: %s", file_path)
         raise ValueError(f"Failed to load PDF: {e}")
+
 
 def chunk_documents(
     documents: List[Document],
-    chunk_size: int = 1000,
-    chunk_overlap: int = 200,
+    chunk_size: int = CHUNK_SIZE,
+    chunk_overlap: int = CHUNK_OVERLAP,
 ) -> List[Document]:
     """
     Split documents into smaller overlapping chunks.
@@ -43,12 +51,13 @@ def chunk_documents(
       5. Characters ("")    ← last resort
     """
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size = chunk_size,
-        chunk_overlap = chunk_overlap,
-        separators = ["\n\n", "\n", ". ", " ", ""],
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        separators=["\n\n", "\n", ". ", " ", ""],
     )
     chunks = splitter.split_documents(documents)
     return chunks
+
 
 def process_uploaded_file(uploaded_file, save_dir: str = "data") -> List[Document]:
     """
@@ -75,6 +84,7 @@ def process_uploaded_file(uploaded_file, save_dir: str = "data") -> List[Documen
         pages = load_pdf(str(file_path))
         chunks = chunk_documents(pages)
     except Exception:
+        logger.exception("Failed to process uploaded file, cleaning up")
         file_path.unlink()
         raise
 
