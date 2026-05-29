@@ -3,7 +3,7 @@ from langchain.schema import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 import chromadb
 import logging
-from src.settings import CHROMA_PERSIST_DIR, COLLECTION_NAME, EMBEDDING_MODEL
+from src.settings import CHROMA_PERSIST_DIR, COLLECTION_NAME, EMBEDDING_MODEL, RETRIEVE_K
 
 logger = logging.getLogger(__name__)
 _embeddings = None
@@ -104,10 +104,12 @@ def get_indexed_files(collection: chromadb.Collection) -> list[str]:
 def query_vector_store(
     collection: chromadb.Collection,
     query: str,
-    k: int = 4,
+    k: int = RETRIEVE_K,
+    filter_sources: Optional[list[str]] = None,
 ) -> List[Document]:
     """
     Embed the query and find the k most similar chunks across all documents.
+    If filter_sources is provided, only return chunks from those source filenames.
     """
     try:
         embeddings_model = get_embeddings()
@@ -118,9 +120,14 @@ def query_vector_store(
         if n == 0:
             return []
 
+        where_filter = None
+        if filter_sources:
+            where_filter = {"source": {"$in": filter_sources}}
+
         results = collection.query(
             query_embeddings=[query_vector],
             n_results=n,
+            where=where_filter,
         )
     except Exception as e:
         logger.exception("Failed to query vector store")
@@ -130,3 +137,4 @@ def query_vector_store(
     for text, metadata in zip(results["documents"][0], results["metadatas"][0]):
         docs.append(Document(page_content=text, metadata=metadata))
     return docs
+

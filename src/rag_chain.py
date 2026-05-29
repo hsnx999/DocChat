@@ -1,4 +1,4 @@
-from typing import Generator, List
+from typing import Generator, List, Optional
 import logging
 import chromadb
 from langchain.schema import Document
@@ -6,7 +6,7 @@ from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
 
 from src.vector_store import query_vector_store
-from src.settings import LLM_MODEL, LLM_TEMPERATURE, RETRIEVE_K, MAX_HISTORY_TURNS
+from src.settings import LLM_MODEL, LLM_TEMPERATURE, RETRIEVE_K, MAX_HISTORY_TURNS, RERANKER_MODEL, RERANK_TOP_K
 
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,35 @@ Context:
 ])
 
 _llm = None
+_reranker = None
+
+
+def get_reranker():
+    global _reranker
+    if _reranker is None:
+        try:
+            from sentence_transformers import CrossEncoder
+            _reranker = CrossEncoder(RERANKER_MODEL)
+        except Exception:
+            logger.warning("Failed to load re-ranker '%s'", RERANKER_MODEL)
+            _reranker = None
+    return _reranker
+
+
+def rerank_docs(query: str, docs: List[Document], top_k: int = RERANK_TOP_K) -> List[Document]:
+    """
+    Re-rank retrieved documents using a cross-encoder model.
+    If the re-ranker is unavailable, return the original docs unchanged.
+    """
+    reranker = get_reranker()
+    if reranker is None or not docs:
+        return docs
+
+    pairs = [[query, doc.page_content] for doc in docs]
+    scores = reranker.predict(pairs)
+    scored = list(zip(scores, docs))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [doc for _, doc in scored[:top_k]]
 
 
 def get_llm():
@@ -134,12 +163,14 @@ def answer_question(
     collection: chromadb.Collection,
     question: str,
     chat_history: list,
+    filter_sources: Optional[list[str]] = None,
 ) -> Generator[str, None, None]:
     """
     Full RAG pipeline with memory:
       1. Condense question using chat history
       2. Retrieve relevant chunks using condensed question
-      3. Stream answer using chunks + original question
+      3. Re-rank retrieved chunks
+      4. Stream answer using chunks + original question
     """
     # Step 0 — prompt injection guard
     if not _is_safe_input(question):
@@ -150,16 +181,21 @@ def answer_question(
     standalone_question = condense_question(question, chat_history)
 
     # Step 2 — retrieve using the rewritten question
-    docs = query_vector_store(collection, standalone_question, k=RETRIEVE_K)
+    docs = query_vector_store(
+        collection, standalone_question, k=RETRIEVE_K, filter_sources=filter_sources
+    )
 
-    # Step 3 — format context and build the answer prompt
+    # Step 3 — re-rank retrieved chunks
+    docs = rerank_docs(standalone_question, docs)
+
+    # Step 4 — format context and build the answer prompt
     context = format_context(docs)
     prompt = QA_PROMPT.format_messages(
         context=context,
         question=question,   # show original question to the user-facing LLM
     )
 
-    # Step 4 — stream the answer
+    # Step 5 — stream the answer
     llm = get_llm()
     for chunk in llm.stream(prompt):
         yield chunk.content

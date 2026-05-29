@@ -35,6 +35,42 @@ def load_pdf(file_path: str) -> List[Document]:
         raise ValueError(f"Failed to load PDF: {e}")
 
 
+def load_text(file_path: str) -> List[Document]:
+    """
+    Load a plain-text file (.txt) from disk.
+    Return a single Document with the full file content.
+    """
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            text = f.read()
+        filename = Path(file_path).name
+        return [Document(page_content=text, metadata={"source": filename, "page": 1})]
+    except UnicodeDecodeError:
+        raise ValueError("The text file is not valid UTF-8.")
+
+
+def load_docx(file_path: str) -> List[Document]:
+    """
+    Load a Word document (.docx) from disk.
+    Return a single Document with all paragraph text joined.
+    """
+    try:
+        from docx import Document as DocxDocument
+
+        doc = DocxDocument(file_path)
+        paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+        text = "\n".join(paragraphs)
+        filename = Path(file_path).name
+        if not text.strip():
+            raise ValueError("The Word document appears to be empty.")
+        return [Document(page_content=text, metadata={"source": filename, "page": 1})]
+    except ImportError:
+        raise ValueError(
+            "python-docx is required to process .docx files "
+            "(pip install python-docx)."
+        )
+
+
 def chunk_documents(
     documents: List[Document],
     chunk_size: int = CHUNK_SIZE,
@@ -62,6 +98,7 @@ def chunk_documents(
 def process_uploaded_file(uploaded_file, save_dir: str = "data") -> List[Document]:
     """
     Accept a Streamlit UploadedFile, save it to disk, then load and chunk it.
+    Supports: .pdf, .txt, .docx
     """
     if uploaded_file.size > MAX_FILE_SIZE:
         raise ValueError(
@@ -75,13 +112,29 @@ def process_uploaded_file(uploaded_file, save_dir: str = "data") -> List[Documen
     file_path = save_path / uploaded_file.name
     raw_bytes = uploaded_file.read()
 
-    if raw_bytes[:4] != b"%PDF":
-        raise ValueError("The uploaded file is not a valid PDF (missing %PDF header).")
+    ext = Path(uploaded_file.name).suffix.lower()
+    if ext == ".pdf":
+        if raw_bytes[:4] != b"%PDF":
+            raise ValueError("The file is not a valid PDF (missing %PDF header).")
+    elif ext == ".txt":
+        pass  # no magic-byte check needed
+    elif ext == ".docx":
+        if raw_bytes[:2] != b"PK":
+            raise ValueError("The file is not a valid Word document (missing ZIP header).")
+    else:
+        raise ValueError(f"Unsupported file type: {ext}")
 
     file_path.write_bytes(raw_bytes)
 
     try:
-        pages = load_pdf(str(file_path))
+        if ext == ".pdf":
+            pages = load_pdf(str(file_path))
+        elif ext == ".txt":
+            pages = load_text(str(file_path))
+        elif ext == ".docx":
+            pages = load_docx(str(file_path))
+        else:
+            raise ValueError(f"Unsupported file type: {ext}")
         chunks = chunk_documents(pages)
     except Exception:
         logger.exception("Failed to process uploaded file, cleaning up")

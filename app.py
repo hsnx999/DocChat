@@ -40,6 +40,8 @@ if "processed_files" not in st.session_state:
     st.session_state.processed_files = set()
 if "indexed_files" not in st.session_state:
     st.session_state.indexed_files = get_indexed_files(st.session_state.collection)
+if "selected_docs" not in st.session_state:
+    st.session_state.selected_docs = None
 
 
 def refresh_indexed_files():
@@ -50,7 +52,7 @@ def refresh_indexed_files():
 with st.sidebar:
     st.header("Documents")
 
-    uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"])
+    uploaded_file = st.file_uploader("Upload a document", type=["pdf", "txt", "docx"])
 
     if uploaded_file:
         if uploaded_file.name not in st.session_state.processed_files:
@@ -104,6 +106,15 @@ with st.sidebar:
                 refresh_indexed_files()
                 st.rerun()
 
+        st.divider()
+        selected = st.multiselect(
+            "Search only in:",
+            options=indexed_files,
+            default=indexed_files,
+            label_visibility="collapsed",
+        )
+        st.session_state.selected_docs = selected if selected else None
+
 
 # ── Main chat area ─────────────────────────────────────────────────────────
 indexed_files = st.session_state.indexed_files
@@ -132,6 +143,7 @@ else:
                     st.session_state.collection,
                     question,
                     st.session_state.messages,
+                    filter_sources=st.session_state.selected_docs,
                 ):
                     full_response += token
                     placeholder.markdown(full_response + "▌")
