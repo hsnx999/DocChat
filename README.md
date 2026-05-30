@@ -76,13 +76,15 @@ boundaries are never missed.
 | **Context Precision** | ≥ 0.70 | Whether the retrieved context is relevant and concise |
 
 <!-- EVAL_SCORES -->
-| Metric | Score |
-|---|---|---|
-| Faithfulness | 0.889 |
-| Answer Relevancy | 0.734 |
-| Context Precision | 0.571 |
+**RAGAS Evaluation** — updated 2026-05-30 00:08 UTC
 
-_Latest run: 2026-05-29 23:39 UTC_
+| Metric | Score |
+|---|---|
+| Faithfulness | 0.833 |
+| Answer Relevancy | 0.701 |
+| Context Precision | 0.857 |
+
+_Higher is better (0.0 – 1.0). Run `python evaluate.py` to re-score on your own document._
 <!-- END_EVAL_SCORES -->
 
 Run the evaluation yourself:
