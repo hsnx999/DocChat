@@ -380,7 +380,7 @@ else:
                         st.rerun()
                 with fcol3:
                     if st.button("Delete", key=f"del_{i}"):
-                        st.session_state.messages = st.session_state.messages[:i]
+                        st.session_state.messages = st.session_state.messages[:i-1]
                         _save_chat()
                         st.rerun()
 
