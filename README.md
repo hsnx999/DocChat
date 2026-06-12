@@ -1,5 +1,9 @@
 # DocChat: RAG-Powered Document Q&A Chatbot
 
+DocChat is a production-grade RAG chatbot built on a hybrid retrieval
+pipeline (BM25 + vector search + RRF fusion) with cross-encoder re-ranking,
+conversation memory, and automated RAGAS evaluation.
+
 A conversational AI app that lets you upload PDFs, text files, and Word
 documents and ask questions across all of them in plain English. Answers
 are grounded strictly in the documents, no hallucination from general
@@ -8,7 +12,6 @@ scores.
 
 🔗 **[Live Demo →](https://hsnx999-rag-chatbot.streamlit.app)**
 
-![CI](https://github.com/hsnx999/rag-chatbot/actions/workflows/eval.yml/badge.svg)
 ---
 
 ## Features
@@ -79,13 +82,13 @@ At upload time (runs once per document, including URLs):
 
 At query time (runs on every question):
 
-     5. Condense   Chat history + question rewritten as a standalone query
-     6. Retrieve   Condensed query embedded, top-6 chunks found via cosine similarity
+     6. Condense   Chat history + question rewritten as a standalone query
+     7. Retrieve   Condensed query embedded, top-6 chunks found via cosine similarity
                    combined with BM25 keyword search (RRF fusion). Searches across
                    selected documents only (or all if none selected).
-     7. Re-rank    Cross-encoder scores each retrieved chunk against the query;
+     8. Re-rank    Cross-encoder scores each retrieved chunk against the query;
                    only the top 4 most relevant pass to generation
-     8. Generate   Selected chunks injected into prompt, LLaMA 3.1 streams the answer
+     9. Generate   Selected chunks injected into prompt, LLaMA 3.1 streams the answer
 
 The 200-character overlap between chunks ensures answers that span chunk
 boundaries are never missed.
