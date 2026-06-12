@@ -152,6 +152,9 @@ st.markdown(
     .streamlit-expanderContent p {
         font-size: 14px;
     }
+
+    /* Hide Streamlit default header bar */
+    header[data-testid="stHeader"] { display: none; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -196,58 +199,53 @@ def refresh_indexed_files():
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.header("Documents")
+    # ── Upload ──
+    st.markdown("#### 📤 Upload")
+    uploaded_file = st.file_uploader("Choose a file", type=["pdf", "txt", "docx"],
+                                     label_visibility="collapsed")
 
-    uploaded_file = st.file_uploader("Upload a document", type=["pdf", "txt", "docx"])
+    url_input = st.text_input(
+        "Or paste a URL",
+        key="url_input",
+        placeholder="https://...",
+        label_visibility="collapsed",
+    )
 
-    # URL input
-    with st.expander("Or paste a URL"):
-        url_input = st.text_input("Enter a webpage URL", key="url_input", label_visibility="collapsed")
-        if url_input and url_input not in st.session_state.processed_files:
-            url_display = url_input.split("/")[-1][:50] or url_input.split("/")[-2][:50]
-            with st.spinner(f"Loading {url_display}…"):
-                try:
-                    pages = load_url(url_input)
-                    chunks = chunk_documents(pages)
-                    # Use URL as the "filename" for source tracking
-                    url_name = url_input.split("//")[-1].split("/")[0][:50]
-                    add_documents(
-                        st.session_state.collection,
-                        chunks,
-                        filename=url_name,
-                    )
-                    st.session_state.messages = []
-                    st.session_state.processed_files.add(url_input)
-                    st.success(f"✓ {url_name} indexed")
-                    refresh_indexed_files()
+    if url_input and url_input not in st.session_state.processed_files:
+        url_display = url_input.split("/")[-1][:50] or url_input.split("/")[-2][:50]
+        with st.spinner(f"Loading {url_display}…"):
+            try:
+                pages = load_url(url_input)
+                chunks = chunk_documents(pages)
+                url_name = url_input.split("//")[-1].split("/")[0][:50]
+                add_documents(st.session_state.collection, chunks, filename=url_name)
+                st.session_state.messages = []
+                st.session_state.processed_files.add(url_input)
+                st.success(f"✓ {url_name} indexed")
+                refresh_indexed_files()
 
-                    with st.spinner("Generating summary…"):
-                        summary = generate_document_summary(chunks)
-                        if summary:
-                            st.session_state.messages.append({
-                                "role": "assistant",
-                                "content": f"📄 **{url_name}**\n\n{summary}"
-                            })
-                            _save_chat()
-                except Exception as e:
-                    st.error(f"Failed to load URL: {e}")
+                with st.spinner("Generating summary…"):
+                    summary = generate_document_summary(chunks)
+                    if summary:
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": f"📄 **{url_name}**\n\n{summary}"
+                        })
+                        _save_chat()
+            except Exception as e:
+                st.error(f"Failed to load URL: {e}")
 
     if uploaded_file:
         if uploaded_file.name not in st.session_state.processed_files:
             with st.spinner(f"Embedding {uploaded_file.name}…"):
                 try:
                     chunks = process_uploaded_file(uploaded_file, session_id=st.session_state.session_id)
-                    add_documents(
-                        st.session_state.collection,
-                        chunks,
-                        filename=uploaded_file.name,
-                    )
+                    add_documents(st.session_state.collection, chunks, filename=uploaded_file.name)
                     st.session_state.messages = []
                     st.session_state.processed_files.add(uploaded_file.name)
                     st.success(f"✓ {uploaded_file.name} added")
                     refresh_indexed_files()
 
-                    # Generate and show summary
                     with st.spinner("Generating summary…"):
                         summary = generate_document_summary(chunks)
                         if summary:
@@ -265,13 +263,13 @@ with st.sidebar:
         else:
             st.info(f"{uploaded_file.name} is already indexed.")
 
-    st.divider()
+    # ── Documents ──
     indexed_files = st.session_state.indexed_files
-
     if indexed_files:
-        st.markdown("**Indexed documents:**")
+        st.divider()
+        st.markdown("#### 📚 Your Documents")
         for fname in indexed_files:
-            col1, col2 = st.columns([3, 1])
+            col1, col2 = st.columns([4, 1])
             col1.markdown(f"📄 {fname}")
             if col2.button("✕", key=f"remove_{fname}"):
                 remove_document(st.session_state.collection, fname)
@@ -279,11 +277,7 @@ with st.sidebar:
                 st.session_state.processed_files.discard(fname)
                 refresh_indexed_files()
                 st.rerun()
-    else:
-        st.info("No documents indexed yet.")
 
-    if indexed_files:
-        st.divider()
         with st.popover("Clear all documents", use_container_width=True):
             st.warning("This will permanently delete all indexed documents.")
             if st.button("Yes, clear everything"):
@@ -294,25 +288,27 @@ with st.sidebar:
                 refresh_indexed_files()
                 st.rerun()
 
+        # ── Filter ──
         st.divider()
+        st.markdown("#### 🔍 Search Filter")
         selected = st.multiselect(
-            "Search only in:",
+            "Only search in:",
             options=indexed_files,
             default=indexed_files,
-            label_visibility="collapsed",
+            label_visibility="visible",
         )
         st.session_state.selected_docs = selected if selected else None
 
-    # ── Answer quality indicator ──
+    # ── Feedback stats ──
     rated_msgs = [m for m in st.session_state.messages if m.get("feedback") and m["role"] == "assistant"]
     if rated_msgs:
+        st.divider()
+        st.markdown("#### 📊 Feedback")
         ups = sum(1 for m in rated_msgs if m["feedback"] == "up")
         downs = sum(1 for m in rated_msgs if m["feedback"] == "down")
         total = ups + downs
         pct = round(ups / total * 100) if total > 0 else 0
-        st.divider()
-        st.markdown("**Feedback**")
-        st.caption(f"👍 {ups} / 👎 {downs} — {pct}% helpful")
+        st.caption(f"👍 {ups}  ·  👎 {downs}  —  {pct}% helpful")
 
 
 # ── Main chat area ─────────────────────────────────────────────────────────
@@ -365,7 +361,7 @@ else:
                     source_html += '</div>'
                     st.markdown(source_html, unsafe_allow_html=True)
                 feedback = msg.get("feedback")
-                fcol1, fcol2, fcol3 = st.columns([1, 1, 10])
+                fcol1, fcol2, fcol3 = st.columns([1, 1, 1])
                 with fcol1:
                     up_disabled = feedback is not None
                     if st.button("👍", key=f"up_{i}", disabled=up_disabled):
@@ -379,7 +375,7 @@ else:
                         _save_chat()
                         st.rerun()
                 with fcol3:
-                    if st.button("Delete", key=f"del_{i}"):
+                    if st.button("🗑️", key=f"del_{i}"):
                         st.session_state.messages = st.session_state.messages[:i-1]
                         _save_chat()
                         st.rerun()
@@ -440,7 +436,7 @@ else:
 
             # Render feedback and delete buttons inline
             idx = len(st.session_state.messages) - 1
-            fcol1, fcol2, fcol3 = st.columns([1, 1, 10])
+            fcol1, fcol2, fcol3 = st.columns([1, 1, 1])
             with fcol1:
                 up_disabled = st.session_state.messages[idx].get("feedback") is not None
                 if st.button("👍", key=f"up_inline_{idx}", disabled=up_disabled):
@@ -454,7 +450,7 @@ else:
                     _save_chat()
                     st.rerun()
             with fcol3:
-                if st.button("Delete", key=f"del_inline_{idx}"):
+                if st.button("🗑️", key=f"del_inline_{idx}"):
                     st.session_state.messages = st.session_state.messages[:idx]
                     _save_chat()
                     st.rerun()
