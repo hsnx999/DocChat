@@ -2,11 +2,11 @@ from typing import Generator, List, Optional
 import logging
 import chromadb
 from langchain.schema import Document
-from langchain_groq import ChatGroq
+from langchain_ollama import ChatOllama
 from langchain.prompts import ChatPromptTemplate
 
 from src.vector_store import query_vector_store
-from src.settings import LLM_MODEL, LLM_TEMPERATURE, RETRIEVE_K, MAX_HISTORY_TURNS, RERANKER_MODEL, RERANK_TOP_K
+from src.settings import LLM_MODEL, LLM_TEMPERATURE, OLLAMA_BASE_URL, RETRIEVE_K, MAX_HISTORY_TURNS, RERANKER_MODEL, RERANK_TOP_K
 
 
 logger = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ def rerank_docs(query: str, docs: List[Document], top_k: int = RERANK_TOP_K) -> 
 def get_llm():
     global _llm
     if _llm is None:
-        _llm = ChatGroq(model=LLM_MODEL, temperature=LLM_TEMPERATURE)
+        _llm = ChatOllama(model=LLM_MODEL, temperature=LLM_TEMPERATURE, base_url=OLLAMA_BASE_URL)
     return _llm
 
 

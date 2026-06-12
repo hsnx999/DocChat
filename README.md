@@ -135,7 +135,7 @@ Test cases cover RAG architecture concepts. Swap the PDF and questions to score 
     beautifulsoup4 / lxml         HTML parsing for URL web page ingestion
     HuggingFace all-MiniLM-L6-v2  Lightweight local embeddings (no API cost)
     Cross-Encoder MiniLM-L6-v2    Re-ranks retrieved chunks for precision
-    Groq LLaMA 3.1 8B             Fast, free LLM inference
+    Ollama + LLaMA 3.1 8B         Local LLM inference (no API key needed)
     Streamlit                     Web UI with session state
     PyPDF / python-docx           PDF and Word text extraction
     RAGAS                         Automated RAG evaluation metrics
@@ -145,7 +145,7 @@ Test cases cover RAG architecture concepts. Swap the PDF and questions to score 
 
 ## Run it locally
 
-Prerequisites: Python 3.10+ and a free Groq API key from console.groq.com
+Prerequisites: Python 3.10+, Ollama, and the llama3.1 model
 
 Clone and set up:
 
@@ -155,7 +155,11 @@ Clone and set up:
     source .venv/bin/activate
     pip install -r requirements.txt
 
-Create a .env file from the template:
+Pull the LLM model:
+
+    ollama pull llama3.1
+
+Create a .env file from the template (edit OLLAMA_BASE_URL if not running locally):
 
     cp .env.example .env
 

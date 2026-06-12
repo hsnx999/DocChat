@@ -166,14 +166,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ── Startup validation ─────────────────────────────────────────────────────
-if "GROQ_API_KEY" not in os.environ:
-    st.error(
-        "GROQ_API_KEY is not set. "
-        "Add it to your .env file or environment variables, then restart the app."
-    )
-    st.stop()
-
 # ── Session ID ─────────────────────────────────────────────────────────────
 if "session_id" not in st.session_state:
     sid = st.query_params.get("session_id", "")

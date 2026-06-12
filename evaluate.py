@@ -14,11 +14,11 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
 
 from datasets import Dataset
-from src.settings import LLM_MODEL, EMBEDDING_MODEL, RETRIEVE_K
+from src.settings import LLM_MODEL, EMBEDDING_MODEL, RETRIEVE_K, OLLAMA_BASE_URL
 from ragas import evaluate
 from ragas.metrics import faithfulness, answer_relevancy, context_precision
 from ragas.run_config import RunConfig
-from langchain_groq import ChatGroq
+from langchain_ollama import ChatOllama
 from langchain_huggingface import HuggingFaceEmbeddings
 from ragas.llms import LangchainLLMWrapper
 from ragas.embeddings import LangchainEmbeddingsWrapper
@@ -150,7 +150,7 @@ def main():
     })
 
     llm = LangchainLLMWrapper(
-        ChatGroq(model=LLM_MODEL, temperature=0.0)
+        ChatOllama(model=LLM_MODEL, temperature=0.0, base_url=OLLAMA_BASE_URL)
     )
     embeddings = LangchainEmbeddingsWrapper(
         HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)

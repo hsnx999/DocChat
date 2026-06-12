@@ -1,7 +1,7 @@
 langchain==0.3.25
 langchain-community==0.3.23
+langchain-ollama==0.2.3
 langchain-core==0.3.58
-langchain-groq==0.2.4
 langchain-text-splitters==0.3.8
 langchain-huggingface==0.1.2
 chromadb==0.6.3
