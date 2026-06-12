@@ -14,7 +14,7 @@ COLLECTION_NAME = "rag_documents"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
 # ── RAG chain ───────────────────────────────────────────────
-LLM_MODEL = "llama3.1:8b"
+LLM_MODEL = "llama3.1:8b-instruct-q4_K_M"
 OLLAMA_BASE_URL = "http://localhost:11434"
 LLM_TEMPERATURE = 0.0
 RETRIEVE_K = 6
