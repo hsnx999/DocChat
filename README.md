@@ -80,12 +80,12 @@ scores.
 
 At upload time (runs once per document, including URLs):
 
-    1. Load    PyPDF / python-docx / plain-text reader for files, or WebBaseLoader /
-               urllib for URLs (PDF and HTML supported)
-    2. Chunk   Text split into 1000-char segments with 200-char overlap
-    3. Embed   Each chunk converted to a vector using all-MiniLM-L6-v2
-    4. Summarize  A 5-bullet TL;DR is generated and shown in the chat
-    5. Store   Vectors saved to ChromaDB on disk, tagged with source filename
+     1. Load    PyPDF / python-docx / plain-text reader for files, or WebBaseLoader /
+                urllib for URLs (PDF and HTML supported)
+     2. Chunk   Text split into 1000-char segments with 200-char overlap
+     3. Embed   Each chunk converted to a vector using all-MiniLM-L6-v2
+     4. Summary A 5-bullet TL;DR is generated and shown in the chat
+     5. Store   Vectors saved to ChromaDB on disk, tagged with source filename
 
 At query time (runs on every question):
 
