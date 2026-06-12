@@ -208,83 +208,76 @@ def refresh_indexed_files():
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
-    # Header with gear
-    col1, col2 = st.columns([5, 1])
-    with col1:
-        st.markdown("### DocChat")
-    with col2:
-        with st.popover("⚙️", use_container_width=True):
-            st.markdown("#### Settings")
+    st.markdown("### DocChat")
+    with st.popover("⚙️ Settings", use_container_width=True):
+        st.markdown("#### Provider")
 
-            # Provider selection
-            provider_names = list(PROVIDER_CONFIG.keys())
-            current = provider_names.index(st.session_state.selected_provider) if st.session_state.selected_provider in provider_names else 0
-            sel_prov = st.selectbox(
-                "Provider", provider_names, index=current,
-                format_func=lambda p: PROVIDER_CONFIG[p]["name"],
+        provider_names = list(PROVIDER_CONFIG.keys())
+        current = provider_names.index(st.session_state.selected_provider) if st.session_state.selected_provider in provider_names else 0
+        sel_prov = st.selectbox(
+            "Select provider",
+            provider_names,
+            index=current,
+            format_func=lambda p: PROVIDER_CONFIG[p]["name"],
+            label_visibility="collapsed",
+        )
+        st.session_state.selected_provider = sel_prov
+        cfg = PROVIDER_CONFIG[sel_prov]
+
+        if cfg["key_env"]:
+            st.markdown(f"#### {cfg['name']} API Key")
+            current_key = st.session_state.api_keys.get(sel_prov, "")
+            api_key = st.text_input(
+                "Enter your API key",
+                type="password",
+                value=current_key,
+                placeholder=f"sk-...",
+                label_visibility="collapsed",
             )
-            st.session_state.selected_provider = sel_prov
-            cfg = PROVIDER_CONFIG[sel_prov]
+            st.session_state.api_keys[sel_prov] = api_key
 
-            # API key
-            if cfg["key_env"]:
-                current_key = st.session_state.api_keys.get(sel_prov, "")
-                api_key = st.text_input(
-                    f"API Key ({cfg['key_env']})",
-                    type="password", value=current_key,
-                    placeholder=f"Enter {cfg['key_env']}",
-                )
-                st.session_state.api_keys[sel_prov] = api_key
-
-                if st.button("Fetch Models", key=f"fetch_{sel_prov}"):
+            fetch_col1, fetch_col2 = st.columns([1, 1])
+            with fetch_col1:
+                if st.button("Fetch Models", key=f"fetch_{sel_prov}", use_container_width=True):
                     if api_key:
                         with st.spinner("Fetching models..."):
                             models = list_provider_models(sel_prov, api_key)
                             st.session_state.provider_models[sel_prov] = models
                             st.rerun()
+            if api_key:
+                with fetch_col2:
+                    st.caption("✅ Key set")
 
-            # Show available models
-            if sel_prov == "ollama":
-                models = st.session_state.installed_models
-            else:
-                models = st.session_state.provider_models.get(sel_prov, [])
-            if models:
-                st.caption(f"{len(models)} models")
-                st.caption(", ".join(models[:4]))
-            elif cfg["key_env"] and not st.session_state.api_keys.get(sel_prov):
-                st.caption("Set key and click Fetch")
+        if sel_prov == "ollama":
+            current_base = st.session_state.api_keys.get("ollama_base_url", "http://localhost:11434")
+            base_url = st.text_input("Ollama Base URL", value=current_base, label_visibility="collapsed")
+            st.session_state.api_keys["ollama_base_url"] = base_url
 
-            # Ollama base URL
-            if sel_prov == "ollama":
-                current_base = st.session_state.api_keys.get("ollama_base_url", "http://localhost:11434")
-                base_url = st.text_input("Ollama Base URL", value=current_base)
-                st.session_state.api_keys["ollama_base_url"] = base_url
+        st.divider()
+        st.markdown("#### Model")
+        if sel_prov == "ollama":
+            model_options = st.session_state.installed_models
+        else:
+            model_options = st.session_state.provider_models.get(sel_prov, [])
 
-            st.divider()
-            st.markdown("**Pipeline**")
-            st.number_input("Retrieve K", value=RETRIEVE_K, min_value=1, max_value=20, key="override_k")
-            st.slider("Temperature", 0.0, 2.0, LLM_TEMPERATURE, 0.1, key="override_temp")
+        if model_options:
+            mi = model_options.index(st.session_state.selected_model) if st.session_state.selected_model in model_options else 0
+            selected = st.selectbox(
+                "Choose a model",
+                model_options,
+                index=mi,
+                label_visibility="collapsed",
+            )
+            st.session_state.selected_model = selected
+        elif cfg["key_env"] and not st.session_state.api_keys.get(sel_prov):
+            st.caption("Enter an API key and click Fetch Models")
+        else:
+            st.caption("No models available")
 
-    # Quick provider + model selector
-    if not any(msg for msg in st.session_state.messages):
-        # Only show when no messages (avoid clutter during chat)
-        colp, colm = st.columns(2)
-        with colp:
-            pnames = list(PROVIDER_CONFIG.keys())
-            pi = pnames.index(st.session_state.selected_provider)
-            prov = st.selectbox("Provider", pnames, index=pi, key="quick_prov", label_visibility="collapsed")
-            st.session_state.selected_provider = prov
-        with colm:
-            if prov == "ollama":
-                mopts = st.session_state.installed_models
-            else:
-                mopts = st.session_state.provider_models.get(prov, [LLM_MODEL])
-            if not mopts:
-                mopts = [LLM_MODEL]
-            mi = mopts.index(st.session_state.selected_model) if st.session_state.selected_model in mopts else 0
-            st.selectbox("Model", mopts, index=mi, key="quick_model", label_visibility="collapsed")
-            if "quick_model" in st.session_state:
-                st.session_state.selected_model = st.session_state.quick_model
+        st.divider()
+        st.markdown("#### Pipeline")
+        st.number_input("Retrieve K", value=RETRIEVE_K, min_value=1, max_value=20, key="override_k")
+        st.slider("Temperature", 0.0, 2.0, LLM_TEMPERATURE, 0.1, key="override_temp")
 
     # ── Upload ──
     st.markdown("#### 📤 Upload")
