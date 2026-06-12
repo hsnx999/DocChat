@@ -106,7 +106,7 @@ st.markdown(
         /* Sidebar: collapse on narrow screens */
     @media (max-width: 768px) {
         /* Pull main content left — sidebar toggle is smaller on mobile */
-        .stApp .main .block-container { padding-left: 1rem !important; }
+        .stApp .main .block-container { padding-left: 3.5rem !important; }
 
         /* Main content padding */
         .main .block-container {
