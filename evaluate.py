@@ -100,8 +100,6 @@ def run_pipeline(collection, question: str) -> tuple[str, list[str]]:
 
 
 def main():
-    os.environ["TRANSFORMERS_OFFLINE"] = "1"
-    os.environ["HF_DATASETS_OFFLINE"] = "1"
 
     logger.info("=" * 55)
     logger.info("  DocChat — RAGAS Evaluation")
