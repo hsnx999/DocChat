@@ -141,7 +141,12 @@ def list_session_collections() -> List[str]:
     """Return all collection names starting with 'session_'."""
     client = get_chroma_client()
     try:
-        return [c.name for c in client.list_collections() if c.name.startswith("session_")]
+        names = []
+        for c in client.list_collections():
+            name = c if isinstance(c, str) else c.name
+            if name.startswith("session_"):
+                names.append(name)
+        return names
     except Exception:
         logger.exception("Failed to list collections")
         return []
@@ -257,7 +262,7 @@ def query_vector_store(
 
     bm25_docs = query_bm25(collection, query, k=k, filter_sources=filter_sources)
     if not bm25_docs:
-        logger.warning("BM25 search returned no results — hybrid fusion skipped")
+        logger.warning("BM25 search returned no results -- hybrid fusion skipped")
         return vector_docs
 
     return _rrf_fuse(vector_docs, bm25_docs)

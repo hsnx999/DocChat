@@ -14,6 +14,7 @@ from src.vector_store import (
 from src.rag_chain import answer_question, generate_document_summary
 from src.settings import SESSION_CLEANUP_AGE_HOURS
 import os
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
 import json
 import uuid
 import shutil
@@ -221,7 +222,11 @@ with st.sidebar:
                     with st.spinner("Generating summary…"):
                         summary = generate_document_summary(chunks)
                         if summary:
-                            st.markdown(summary)
+                            st.session_state.messages.append({
+                                "role": "assistant",
+                                "content": f"📄 **{url_name}**\n\n{summary}"
+                            })
+                            _save_chat()
                 except Exception as e:
                     st.error(f"Failed to load URL: {e}")
 
@@ -244,7 +249,11 @@ with st.sidebar:
                     with st.spinner("Generating summary…"):
                         summary = generate_document_summary(chunks)
                         if summary:
-                            st.markdown(summary)
+                            st.session_state.messages.append({
+                                "role": "assistant",
+                                "content": f"📄 **{uploaded_file.name}**\n\n{summary}"
+                            })
+                            _save_chat()
                 except ValueError as e:
                     logger.exception("Upload validation failed")
                     st.error(str(e))
