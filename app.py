@@ -1,6 +1,9 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import os
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+
 import streamlit as st
 from src.document_processor import process_uploaded_file, load_url, chunk_documents
 from src.vector_store import (
@@ -13,8 +16,6 @@ from src.vector_store import (
 )
 from src.rag_chain import answer_question, generate_document_summary
 from src.settings import SESSION_CLEANUP_AGE_HOURS
-import os
-os.environ["ANONYMIZED_TELEMETRY"] = "False"
 import json
 import uuid
 import shutil
@@ -417,6 +418,7 @@ else:
             "content": full_response,
         })
         _save_chat()
+        st.rerun()
 
         if len(st.session_state.messages) > 100:
             st.session_state.messages = st.session_state.messages[-100:]
