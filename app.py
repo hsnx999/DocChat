@@ -4,6 +4,9 @@ load_dotenv()
 import os
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
 
+import warnings
+warnings.filterwarnings("ignore", category=SyntaxWarning)
+
 import streamlit as st
 from src.document_processor import process_uploaded_file, load_url, chunk_documents
 from src.vector_store import (
@@ -354,7 +357,7 @@ else:
                 st.markdown(msg["content"])
                 sources = msg.get("sources")
                 if sources:
-                    source_html = '<div style="margin-top: 8px; padding: 6px 10px; background: rgba(128,128,128,0.1); border-radius: 8px; font-size: 13px;">'
+                    source_html = '<div style="margin-top: 8px; margin-bottom: 8px; padding: 6px 10px; background: rgba(128,128,128,0.1); border-radius: 8px; font-size: 13px;">'
                     source_html += '<strong>Sources:</strong><br>'
                     for j, s in enumerate(sources, start=1):
                         source_html += f'<sup>{j}</sup> {s["filename"]} (page {s["page"]})<br>'
@@ -427,7 +430,7 @@ else:
 
             # Render sources inline inside the same chat bubble
             if source_docs:
-                source_html = '<div style="margin-top: 8px; padding: 6px 10px; background: rgba(128,128,128,0.1); border-radius: 8px; font-size: 13px;">'
+                source_html = '<div style="margin-top: 8px; margin-bottom: 8px; padding: 6px 10px; background: rgba(128,128,128,0.1); border-radius: 8px; font-size: 13px;">'
                 source_html += '<strong>Sources:</strong><br>'
                 for j, s in enumerate(source_docs, start=1):
                     source_html += f'<sup>{j}</sup> {s["filename"]} (page {s["page"]})<br>'
@@ -436,21 +439,24 @@ else:
 
             # Render feedback and delete buttons inline
             idx = len(st.session_state.messages) - 1
-            fcol1, fcol2, fcol3 = st.columns([1, 1, 1])
-            with fcol1:
-                up_disabled = st.session_state.messages[idx].get("feedback") is not None
-                if st.button("👍", key=f"up_inline_{idx}", disabled=up_disabled):
-                    st.session_state.messages[idx]["feedback"] = "up"
-                    _save_chat()
-                    st.rerun()
-            with fcol2:
-                down_disabled = st.session_state.messages[idx].get("feedback") is not None
-                if st.button("👎", key=f"down_inline_{idx}", disabled=down_disabled):
-                    st.session_state.messages[idx]["feedback"] = "down"
-                    _save_chat()
-                    st.rerun()
-            with fcol3:
-                if st.button("🗑️", key=f"del_inline_{idx}"):
-                    st.session_state.messages = st.session_state.messages[:idx]
-                    _save_chat()
-                    st.rerun()
+            try:
+                fcol1, fcol2, fcol3 = st.columns([1, 1, 1])
+                with fcol1:
+                    up_disabled = st.session_state.messages[idx].get("feedback") is not None
+                    if st.button("👍", key=f"up_inline_{idx}", disabled=up_disabled):
+                        st.session_state.messages[idx]["feedback"] = "up"
+                        _save_chat()
+                        st.rerun()
+                with fcol2:
+                    down_disabled = st.session_state.messages[idx].get("feedback") is not None
+                    if st.button("👎", key=f"down_inline_{idx}", disabled=down_disabled):
+                        st.session_state.messages[idx]["feedback"] = "down"
+                        _save_chat()
+                        st.rerun()
+                with fcol3:
+                    if st.button("🗑️", key=f"del_inline_{idx}"):
+                        st.session_state.messages = st.session_state.messages[:idx]
+                        _save_chat()
+                        st.rerun()
+            except RuntimeError:
+                pass  # SessionInfo race on Streamlit Cloud, state persisted anyway
