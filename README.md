@@ -3,8 +3,8 @@
 DocChat is a production-grade RAG chatbot built on a hybrid retrieval
 pipeline (BM25 + vector search + RRF fusion) with cross-encoder re-ranking,
 conversation memory, and automated RAGAS evaluation. Supports 7 LLM
-providers — Ollama, OpenAI, Groq, Anthropic Claude, DeepSeek, Google Gemini,
-and OpenCode Zen — switchable at runtime.
+providers: Ollama, OpenAI, Groq, Anthropic Claude, DeepSeek, Google Gemini,
+and OpenCode Zen, switchable at runtime.
 
 A conversational AI app that lets you upload PDFs, text files, and Word
 documents and ask questions across all of them in plain English. Answers
@@ -39,7 +39,7 @@ scores.
     URL ingestion              Paste any webpage or PDF URL and chat with it
                                instantly, no file download needed.
 
-    Multi-provider support     Choose from 7 LLM providers — Ollama,
+    Multi-provider support     Choose from 7 LLM providers: Ollama,
                                OpenAI, Groq, Claude, DeepSeek, Gemini,
                                and OpenCode Zen. Switch at runtime with
                                no restart needed.
@@ -95,8 +95,8 @@ At query time (runs on every question):
                    selected documents only (or all if none selected).
      8. Re-rank    Cross-encoder scores each retrieved chunk against the query;
                    only the top 4 most relevant pass to generation
-      9. Generate   Selected chunks injected into prompt, the selected LLM
-                    streams the answer
+     9. Generate   Selected chunks injected into prompt, the selected LLM
+                   streams the answer
 
 The 200-character overlap between chunks ensures answers that span chunk
 boundaries are never missed.
@@ -112,7 +112,7 @@ boundaries are never missed.
 | **Context Precision** | ≥ 0.70 | Whether the retrieved context is relevant and concise |
 
 <!-- EVAL_SCORES -->
-**RAGAS Evaluation** — updated 2026-06-12 10:57 UTC
+**RAGAS Evaluation**, updated 2026-06-12 10:57 UTC
 
 | Metric | Score |
 |---|---|
@@ -144,7 +144,7 @@ Test cases cover RAG architecture concepts. Swap the PDF and questions to score 
     HuggingFace all-MiniLM-L6-v2  Lightweight local embeddings (no API cost)
     Cross-Encoder MiniLM-L6-v2    Re-ranks retrieved chunks for precision
     Multi-provider LLM            Ollama (default), OpenAI, Groq, Claude,
-                                  DeepSeek, Gemini, OpenCode Zen — switchable
+                                  DeepSeek, Gemini, OpenCode Zen, switchable
                                   at runtime via settings popover
     Streamlit                     Web UI with session state
     PyPDF / python-docx           PDF and Word text extraction
@@ -212,7 +212,7 @@ persisted as Docker volumes.
     │   ├── test_rag_chain.py
     │   └── test_vector_store.py
     ├── src/
-    │   ├── settings.py             Centralized configuration constants
+    │   ├── settings.py             Configuration constants + multi-provider LLM config
     │   ├── document_processor.py   PDF/TXT/DOCX/URL loading, chunking, upload handler
     │   ├── vector_store.py         ChromaDB operations: add, remove, query, BM25+RRF hybrid
     │   └── rag_chain.py            Question condensing, re-ranking, prompt templates, LLM streaming
