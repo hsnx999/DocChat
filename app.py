@@ -101,7 +101,7 @@ st.markdown(
     .main > div { max-width: 100%; padding: 0 0.5rem; }
 
     /* Prevent collapsed sidebar toggle from covering title */
-    .stApp .main .block-container { padding-left: 3rem !important; }
+    .stApp .main .block-container { padding-left: 4rem !important; }
 
     /* Sidebar: collapse on narrow screens */
     @media (max-width: 768px) {
