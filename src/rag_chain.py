@@ -124,6 +124,10 @@ def list_provider_models(provider: str, api_key: str = "") -> list[str]:
     cfg = PROVIDER_CONFIG[provider]
     endpoint = cfg["list_endpoint"]
 
+    if cfg["key_env"] and not api_key:
+        logger.warning("No API key provided for %s, skipping model fetch", provider)
+        return []
+
     try:
         import urllib.request, json
 
@@ -147,9 +151,10 @@ def list_provider_models(provider: str, api_key: str = "") -> list[str]:
                 for m in data.get("models", [])
                 if "generateContent" in m.get("supportedGenerationMethods", [])
             ]
-        return [m["id"] for m in data.get("data", [])]
-    except Exception:
-        logger.exception("Failed to list models for %s", provider)
+            return [m["id"] for m in data.get("data", [])]
+    except Exception as e:
+        status = getattr(e, "code", "?")
+        logger.exception("Failed to list models for %s (HTTP %s)", provider, status)
         return []
 
 
