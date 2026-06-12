@@ -248,8 +248,9 @@ with st.sidebar:
                         st.session_state.provider_models[sel_prov] = models
                         if not models:
                             st.error("No models found. Check your API key.")
-                            st.stop()
-                        st.rerun()
+                        else:
+                            st.success(f"Loaded {len(models)} models")
+                            st.rerun()
             with fetch_col2:
                 if api_key:
                     st.caption("✅ Key set")
