@@ -105,8 +105,17 @@ st.markdown(
 
         /* Sidebar: collapse on narrow screens */
     @media (max-width: 768px) {
+        /* Prevent horizontal scroll that shifts sidebar */
+        html, body, .stApp { overflow-x: hidden !important; }
+
         /* Pull main content left — sidebar toggle is smaller on mobile */
         .stApp .main .block-container { padding-left: 3.5rem !important; }
+
+        /* Lock sidebar in place */
+        section[data-testid="stSidebar"] {
+            overflow-x: hidden !important;
+            min-width: 0 !important;
+        }
 
         /* Main content padding */
         .main .block-container {
@@ -222,82 +231,85 @@ def refresh_indexed_files():
     st.session_state.indexed_files = get_indexed_files(st.session_state.collection)
 
 
-# ── Sidebar ────────────────────────────────────────────────────────────────
-with st.sidebar:
-    with st.popover("⚙️ Settings", use_container_width=True):
-        st.markdown("#### Provider")
+@st.dialog("Settings", width="large")
+def _render_settings_dialog():
+    provider_names = list(PROVIDER_CONFIG.keys())
+    current = provider_names.index(st.session_state.selected_provider) if st.session_state.selected_provider in provider_names else 0
+    sel_prov = st.selectbox(
+        "Select provider",
+        provider_names,
+        index=current,
+        format_func=lambda p: PROVIDER_CONFIG[p]["name"],
+        label_visibility="collapsed",
+    )
+    st.session_state.selected_provider = sel_prov
+    cfg = PROVIDER_CONFIG[sel_prov]
 
-        provider_names = list(PROVIDER_CONFIG.keys())
-        current = provider_names.index(st.session_state.selected_provider) if st.session_state.selected_provider in provider_names else 0
-        sel_prov = st.selectbox(
-            "Select provider",
-            provider_names,
-            index=current,
-            format_func=lambda p: PROVIDER_CONFIG[p]["name"],
+    if cfg["key_env"]:
+        st.markdown(f"#### {cfg['name']} API Key")
+        current_key = st.session_state.api_keys.get(sel_prov, "")
+        api_key = st.text_input(
+            "Enter your API key",
+            type="password",
+            value=current_key,
+            placeholder=f"sk-...",
             label_visibility="collapsed",
         )
-        st.session_state.selected_provider = sel_prov
-        cfg = PROVIDER_CONFIG[sel_prov]
+        st.session_state.api_keys[sel_prov] = api_key
 
-        if cfg["key_env"]:
-            st.markdown(f"#### {cfg['name']} API Key")
-            current_key = st.session_state.api_keys.get(sel_prov, "")
-            api_key = st.text_input(
-                "Enter your API key",
-                type="password",
-                value=current_key,
-                placeholder=f"sk-...",
-                label_visibility="collapsed",
-            )
-            st.session_state.api_keys[sel_prov] = api_key
+        if st.button(
+            "Fetch Models",
+            key=f"fetch_{sel_prov}",
+            use_container_width=True,
+            disabled=not api_key,
+        ):
+            with st.spinner("Fetching models..."):
+                models = list_provider_models(sel_prov, api_key)
+            st.session_state.provider_models[sel_prov] = models
+            if not models:
+                st.error("No models found. Check your API key.")
 
-            if st.button(
-                "Fetch Models",
-                key=f"fetch_{sel_prov}",
-                use_container_width=True,
-                disabled=not api_key,
-            ):
-                with st.spinner("Fetching models..."):
-                    models = list_provider_models(sel_prov, api_key)
-                st.session_state.provider_models[sel_prov] = models
-                if not models:
-                    st.error("No models found. Check your API key.")
+        if api_key and st.session_state.provider_models.get(sel_prov):
+            st.success(f"{len(st.session_state.provider_models[sel_prov])} models available")
+        elif api_key:
+            st.caption("Click Fetch Models to load available models")
 
-            if api_key and st.session_state.provider_models.get(sel_prov):
-                st.success(f"{len(st.session_state.provider_models[sel_prov])} models available")
-            elif api_key:
-                st.caption("Click Fetch Models to load available models")
+    if sel_prov == "ollama":
+        current_base = st.session_state.api_keys.get("ollama_base_url", "http://localhost:11434")
+        base_url = st.text_input("Ollama Base URL", value=current_base, label_visibility="collapsed")
+        st.session_state.api_keys["ollama_base_url"] = base_url
 
-        if sel_prov == "ollama":
-            current_base = st.session_state.api_keys.get("ollama_base_url", "http://localhost:11434")
-            base_url = st.text_input("Ollama Base URL", value=current_base, label_visibility="collapsed")
-            st.session_state.api_keys["ollama_base_url"] = base_url
+    st.divider()
+    st.markdown("#### Model")
+    if sel_prov == "ollama":
+        model_options = st.session_state.installed_models
+    else:
+        model_options = st.session_state.provider_models.get(sel_prov, [])
 
-        st.divider()
-        st.markdown("#### Model")
-        if sel_prov == "ollama":
-            model_options = st.session_state.installed_models
-        else:
-            model_options = st.session_state.provider_models.get(sel_prov, [])
+    if model_options:
+        mi = model_options.index(st.session_state.selected_model) if st.session_state.selected_model in model_options else 0
+        selected = st.selectbox(
+            "Choose a model",
+            model_options,
+            index=mi,
+            label_visibility="collapsed",
+        )
+        st.session_state.selected_model = selected
+    elif cfg["key_env"] and not st.session_state.api_keys.get(sel_prov):
+        st.caption("Enter an API key and click Fetch Models")
+    else:
+        st.caption("No models available")
 
-        if model_options:
-            mi = model_options.index(st.session_state.selected_model) if st.session_state.selected_model in model_options else 0
-            selected = st.selectbox(
-                "Choose a model",
-                model_options,
-                index=mi,
-                label_visibility="collapsed",
-            )
-            st.session_state.selected_model = selected
-        elif cfg["key_env"] and not st.session_state.api_keys.get(sel_prov):
-            st.caption("Enter an API key and click Fetch Models")
-        else:
-            st.caption("No models available")
+    st.divider()
+    st.markdown("#### Pipeline")
+    st.number_input("Retrieve K", value=RETRIEVE_K, min_value=1, max_value=20, key="override_k")
+    st.slider("Temperature", 0.0, 2.0, LLM_TEMPERATURE, 0.1, key="override_temp")
 
-        st.divider()
-        st.markdown("#### Pipeline")
-        st.number_input("Retrieve K", value=RETRIEVE_K, min_value=1, max_value=20, key="override_k")
-        st.slider("Temperature", 0.0, 2.0, LLM_TEMPERATURE, 0.1, key="override_temp")
+
+# ── Sidebar ────────────────────────────────────────────────────────────────
+with st.sidebar:
+    if st.button("⚙️ Settings", use_container_width=True):
+        _render_settings_dialog()
 
     # ── Upload ──
     st.markdown("#### 📤 Upload")
