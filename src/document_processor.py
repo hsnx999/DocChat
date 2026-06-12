@@ -83,10 +83,10 @@ def load_url(url: str) -> List[Document]:
             doc.metadata["source"] = url
             doc.metadata["page"] = 1
         return docs
-    except ImportError:
+    except ImportError as e:
         raise ValueError(
-            "langchain_community is required to load URLs "
-            "(pip install langchain-community)."
+            f"Missing dependency: {e}. "
+            "Install with: pip install beautifulsoup4 lxml"
         )
     except Exception as e:
         logger.exception("Failed to load URL: %s", url)
