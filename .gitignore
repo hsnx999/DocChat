@@ -1,12 +1,23 @@
+# ── Secrets ──
 .env
+
+# ── Runtime data ──
 chroma_db/
+data/
+
+# ── Python ──
 __pycache__/
 *.pyc
-.DS_Store
 .venv/
-data/
+
+# ── OS ──
+.DS_Store
+
+# ── Orphaned dirs from rolled-back migration ──
 frontend/
 backend/
+
+# ── Local dev config (not tracked) ──
 opencode.json
 AGENTS.md
 .opencode/

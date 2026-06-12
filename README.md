@@ -167,9 +167,10 @@ Open http://localhost:8501, upload one or more documents, and start asking quest
 
 ---
 
-## Run with Docker
+## Run with Docker or Podman
 
-    docker compose up --build
+    docker compose up --build          # Docker
+    podman compose up --build          # Podman
 
 Open http://localhost:8501. The `data/` and `chroma_db/` directories are
 persisted as Docker volumes.

@@ -1,14 +1,29 @@
+# ── Version control ──
 .git/
 .gitignore
+.github/
+
+# ── Python ──
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+
+# ── OS ──
 .DS_Store
+
+# ── Secrets ──
 .env
+
+# ── Dev-only (not needed at runtime) ──
 README.md
 tests/
 .opencode/
 opencode.json
 AGENTS.md
+evaluate.py
+scripts/
+
+# ── Runtime data (mounted as volumes) ──
 chroma_db/
 data/
