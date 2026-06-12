@@ -3,6 +3,8 @@ from typing import List
 import logging
 
 from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
+import tempfile
+import urllib.request
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 
@@ -73,10 +75,20 @@ def load_docx(file_path: str) -> List[Document]:
 
 def load_url(url: str) -> List[Document]:
     """
-    Load text content from a URL.
-    Return a Document with the page content and URL as source.
+    Load content from a URL. Handles both HTML pages (via WebBaseLoader)
+    and PDF files (downloaded and parsed via load_pdf).
+    Return a Document list with the URL as source.
     """
     try:
+        if url.lower().endswith(".pdf") or "/pdf/" in url.lower():
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                urllib.request.urlretrieve(url, tmp.name)
+                docs = load_pdf(tmp.name)
+                Path(tmp.name).unlink(missing_ok=True)
+            for doc in docs:
+                doc.metadata["source"] = url
+            return docs
+
         loader = WebBaseLoader(url)
         docs = loader.load()
         for doc in docs:

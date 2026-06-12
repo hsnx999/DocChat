@@ -203,7 +203,8 @@ with st.sidebar:
     with st.expander("Or paste a URL"):
         url_input = st.text_input("Enter a webpage URL", key="url_input", label_visibility="collapsed")
         if url_input and url_input not in st.session_state.processed_files:
-            with st.spinner(f"Loading {url_input}…"):
+            url_display = url_input.split("/")[-1][:50] or url_input.split("/")[-2][:50]
+            with st.spinner(f"Loading {url_display}…"):
                 try:
                     pages = load_url(url_input)
                     chunks = chunk_documents(pages)
