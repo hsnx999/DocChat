@@ -1,5 +1,5 @@
 from typing import List, Optional
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 import chromadb
 from chromadb.errors import InvalidCollectionException

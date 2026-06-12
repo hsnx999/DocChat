@@ -1,7 +1,7 @@
 from typing import Generator, List, Optional
 import logging
 import chromadb
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_ollama import ChatOllama
 from langchain.prompts import ChatPromptTemplate
 

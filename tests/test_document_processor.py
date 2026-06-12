@@ -1,5 +1,5 @@
 import pytest
-from langchain.schema import Document
+from langchain_core.documents import Document
 from src.document_processor import chunk_documents
 
 class TestChunkDocuments:

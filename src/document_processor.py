@@ -6,7 +6,7 @@ from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 import tempfile
 import urllib.request
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 from src.settings import CHUNK_SIZE, CHUNK_OVERLAP, MAX_FILE_SIZE
 
