@@ -418,12 +418,43 @@ else:
             finally:
                 placeholder.markdown(full_response)
 
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": full_response,
-            "sources": source_docs,
-        })
-        _save_chat()
+            # Save the message
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": full_response,
+                "sources": source_docs,
+            })
+            _save_chat()
 
-        if len(st.session_state.messages) > 100:
-            st.session_state.messages = st.session_state.messages[-100:]
+            if len(st.session_state.messages) > 100:
+                st.session_state.messages = st.session_state.messages[-100:]
+
+            # Render sources inline inside the same chat bubble
+            if source_docs:
+                source_html = '<div style="margin-top: 8px; padding: 6px 10px; background: rgba(128,128,128,0.1); border-radius: 8px; font-size: 13px;">'
+                source_html += '<strong>Sources:</strong><br>'
+                for j, s in enumerate(source_docs, start=1):
+                    source_html += f'<sup>{j}</sup> {s["filename"]} (page {s["page"]})<br>'
+                source_html += '</div>'
+                st.markdown(source_html, unsafe_allow_html=True)
+
+            # Render feedback and delete buttons inline
+            idx = len(st.session_state.messages) - 1
+            fcol1, fcol2, fcol3 = st.columns([1, 1, 10])
+            with fcol1:
+                up_disabled = st.session_state.messages[idx].get("feedback") is not None
+                if st.button("👍", key=f"up_inline_{idx}", disabled=up_disabled):
+                    st.session_state.messages[idx]["feedback"] = "up"
+                    _save_chat()
+                    st.rerun()
+            with fcol2:
+                down_disabled = st.session_state.messages[idx].get("feedback") is not None
+                if st.button("👎", key=f"down_inline_{idx}", disabled=down_disabled):
+                    st.session_state.messages[idx]["feedback"] = "down"
+                    _save_chat()
+                    st.rerun()
+            with fcol3:
+                if st.button("Delete", key=f"del_inline_{idx}"):
+                    st.session_state.messages = st.session_state.messages[:idx]
+                    _save_chat()
+                    st.rerun()

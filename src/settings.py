@@ -16,7 +16,7 @@ EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 # ── RAG chain ───────────────────────────────────────────────
 LLM_MODEL = "llama-3.1-8b-instant"
 LLM_TEMPERATURE = 0.0
-RETRIEVE_K = 4
+RETRIEVE_K = 6
 MAX_HISTORY_TURNS = 6
 RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 RERANK_TOP_K = 4
