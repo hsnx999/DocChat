@@ -17,8 +17,8 @@ from src.vector_store import (
     delete_collection,
     list_session_collections,
 )
-from src.rag_chain import answer_question, generate_document_summary
-from src.settings import SESSION_CLEANUP_AGE_HOURS, OLLAMA_MODELS
+from src.rag_chain import answer_question, generate_document_summary, get_installed_models
+from src.settings import SESSION_CLEANUP_AGE_HOURS, LLM_MODEL
 import json
 import uuid
 import shutil
@@ -189,8 +189,11 @@ if "indexed_files" not in st.session_state:
     st.session_state.indexed_files = get_indexed_files(st.session_state.collection)
 if "selected_docs" not in st.session_state:
     st.session_state.selected_docs = None
+if "installed_models" not in st.session_state:
+    st.session_state.installed_models = get_installed_models()
 if "selected_model" not in st.session_state:
-    st.session_state.selected_model = OLLAMA_MODELS[0]
+    models = st.session_state.installed_models
+    st.session_state.selected_model = models[0] if models else LLM_MODEL
 
 
 def refresh_indexed_files():
@@ -201,9 +204,9 @@ def refresh_indexed_files():
 with st.sidebar:
     st.selectbox(
         "Model",
-        options=OLLAMA_MODELS,
+        options=st.session_state.installed_models,
         key="selected_model",
-        help="Select the Ollama model to use. Pull new models with `ollama pull <name>` and add them to OLLAMA_MODELS in src/settings.py.",
+        help="Select the Ollama model to use. Pull new models with `ollama pull <name>` and they will appear here automatically.",
     )
 
     # ── Upload ──

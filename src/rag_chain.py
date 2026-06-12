@@ -6,7 +6,7 @@ from langchain_ollama import ChatOllama
 from langchain.prompts import ChatPromptTemplate
 
 from src.vector_store import query_vector_store
-from src.settings import LLM_MODEL, LLM_TEMPERATURE, OLLAMA_BASE_URL, OLLAMA_MODELS, RETRIEVE_K, MAX_HISTORY_TURNS, RERANKER_MODEL, RERANK_TOP_K
+from src.settings import LLM_MODEL, LLM_TEMPERATURE, OLLAMA_BASE_URL, RETRIEVE_K, MAX_HISTORY_TURNS, RERANKER_MODEL, RERANK_TOP_K
 
 
 logger = logging.getLogger(__name__)
@@ -85,6 +85,17 @@ def get_llm(model_name: str = ""):
         _llm = ChatOllama(model=name, temperature=LLM_TEMPERATURE, base_url=OLLAMA_BASE_URL)
         _llm_model = name
     return _llm
+
+
+def get_installed_models() -> list[str]:
+    """Return a list of model names currently installed in Ollama."""
+    try:
+        import ollama
+        result = ollama.list()
+        return [m["model"] for m in result.get("models", [])]
+    except Exception:
+        logger.exception("Failed to list Ollama models")
+        return [LLM_MODEL]
 
 
 def format_history(messages: list, max_turns: int = MAX_HISTORY_TURNS) -> str:
