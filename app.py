@@ -225,6 +225,7 @@ with st.sidebar:
                 st.session_state.messages = []
                 st.session_state.processed_files.add(url_input)
                 st.success(f"✓ {url_name} indexed")
+                st.session_state.url_input = ""
                 refresh_indexed_files()
 
                 with st.spinner("Generating summary…"):
@@ -364,7 +365,7 @@ else:
                     source_html += '</div>'
                     st.markdown(source_html, unsafe_allow_html=True)
                 feedback = msg.get("feedback")
-                fcol1, fcol2, fcol3 = st.columns([1, 1, 1])
+                fcol_spacer, fcol1, fcol2, fcol3 = st.columns([8, 1, 1, 1])
                 with fcol1:
                     up_disabled = feedback is not None
                     if st.button("👍", key=f"up_{i}", disabled=up_disabled):
@@ -440,7 +441,7 @@ else:
             # Render feedback and delete buttons inline
             idx = len(st.session_state.messages) - 1
             try:
-                fcol1, fcol2, fcol3 = st.columns([1, 1, 1])
+                fcol_spacer, fcol1, fcol2, fcol3 = st.columns([8, 1, 1, 1])
                 with fcol1:
                     up_disabled = st.session_state.messages[idx].get("feedback") is not None
                     if st.button("👍", key=f"up_inline_{idx}", disabled=up_disabled):
