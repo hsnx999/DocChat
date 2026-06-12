@@ -1,9 +1,9 @@
-# DocChat — RAG-Powered Document Q&A Chatbot
+# DocChat: RAG-Powered Document Q&A Chatbot
 
 A conversational AI app that lets you upload PDFs, text files, and Word
 documents and ask questions across all of them in plain English. Answers
-are grounded strictly in the documents — no hallucination from general
-training data — and the pipeline is backed by automated RAGAS evaluation
+are grounded strictly in the documents, no hallucination from general
+training data, and the pipeline is backed by automated RAGAS evaluation
 scores.
 
 🔗 **[Live Demo →](https://hsnx999-rag-chatbot.streamlit.app)**
@@ -32,7 +32,7 @@ scores.
                                AI summary so you know what was indexed.
 
     URL ingestion              Paste any webpage or PDF URL and chat with it
-                               instantly — no file download needed.
+                               instantly, no file download needed.
 
     Conversation memory        Follow-up questions work in context. A condensing
                                step rewrites vague follow-ups like "tell me more
@@ -42,7 +42,7 @@ scores.
     Message management         Edit your own messages, delete individual assistant
                                responses, and rate answers with thumbs up/down.
 
-    Conversation persistence   Chat history survives page refreshes — stored as
+    Conversation persistence   Chat history survives page refreshes, stored as
                                a JSON file in the data/ directory.
 
     Streaming responses        Answers stream token by token in real time,
@@ -50,6 +50,19 @@ scores.
 
     RAGAS evaluation           Automated pipeline scoring on faithfulness,
                                answer relevancy, and context precision.
+
+---
+
+## Architecture decisions
+
+- **Hybrid retrieval (BM25 + vector + RRF) over pure vector search**: keyword
+  matches for names, dates, and IDs that embeddings miss
+- **Cross-encoder re-ranking as a second pass**: cheaper than re-embedding,
+  meaningfully improves precision on top-k results
+- **Question condensing before retrieval**: follow-up questions like
+  "what about the second clause?" resolve correctly against the vector store
+- **Chunk overlap (200 chars)**: prevents answers spanning chunk boundaries
+  from being silently missed
 
 ---
 
@@ -88,7 +101,7 @@ boundaries are never missed.
 | **Context Precision** | ≥ 0.70 | Whether the retrieved context is relevant and concise |
 
 <!-- EVAL_SCORES -->
-**RAGAS Evaluation** — updated 2026-06-12 05:49 UTC
+**RAGAS Evaluation**, updated 2026-06-12 05:49 UTC
 
 | Metric | Score |
 |---|---|
