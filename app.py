@@ -123,6 +123,9 @@ st.markdown(
             font-size: 16px !important;
         }
 
+        /* Prevent iOS zoom on text inputs */
+        input, textarea, select { font-size: 16px !important; }
+
         /* Readable font sizes */
         div[data-testid="stMarkdownContainer"] {
             font-size: 15px !important;
