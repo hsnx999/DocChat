@@ -105,6 +105,10 @@ st.markdown(
 
     /* Sidebar: collapse on narrow screens */
     @media (max-width: 768px) {
+        /* Pull main content left — sidebar toggle is smaller on mobile */
+        .stApp .main .block-container { padding-left: 1rem !important; }
+
+        /* Sidebar full-width overlay */
         section[data-testid="stSidebar"] {
             width: 100% !important;
             max-width: 100% !important;
@@ -113,30 +117,49 @@ st.markdown(
         section[data-testid="stSidebar"] > div:first-child {
             padding: 0.5rem !important;
         }
+
+        /* Main content padding */
         .main .block-container {
-            padding: 1rem 0.5rem !important;
+            padding: 0.5rem 0.5rem !important;
         }
+
+        /* Smaller title on mobile */
+        h1 { font-size: 1.3rem !important; }
+        .stCaption { font-size: 0.75rem !important; }
+
+        /* Touch-friendly buttons */
         button[kind="secondary"], button[kind="primary"] {
             min-height: 44px !important;
             font-size: 16px !important;
         }
-        .st-emotion-cache-1v0mbdj {
-            font-size: 14px !important;
-        }
-        .st-emotion-cache-10trblm {
-            font-size: 14px !important;
-        }
-        .st-emotion-cache-1aehpvj {
-            font-size: 14px !important;
-        }
+
+        /* Readable font sizes */
         div[data-testid="stMarkdownContainer"] {
             font-size: 15px !important;
         }
+
+        /* Larger chat input on mobile */
         .stChatInput textarea {
             font-size: 16px !important;
+            padding: 0.75rem !important;
         }
+
+        /* Compact button columns on mobile */
         div[data-testid="column"] button {
             min-height: 44px !important;
+            min-width: 36px !important;
+            padding: 0.25rem 0.5rem !important;
+        }
+
+        /* Chat message bubbles — reduce padding */
+        .stChatMessage {
+            padding: 0.5rem 0.75rem !important;
+        }
+
+        /* Source citation box full-width */
+        .stMarkdown div[style*="border-radius"] {
+            font-size: 12px !important;
+            padding: 4px 8px !important;
         }
     }
 
