@@ -93,8 +93,9 @@ def run_pipeline(collection, question: str) -> tuple[str, list[str]]:
     docs = query_vector_store(collection, question, k=RETRIEVE_K)
     contexts = [doc.page_content for doc in docs]
     full_answer = ""
-    for token in answer_question(collection, question, chat_history=[]):
-        full_answer += token
+    for item in answer_question(collection, question, chat_history=[]):
+        if item.get("type") == "token":
+            full_answer += item.get("data", "")
     return full_answer, contexts
 
 

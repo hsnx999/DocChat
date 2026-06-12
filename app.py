@@ -2,17 +2,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import streamlit as st
-from src.document_processor import process_uploaded_file
+from src.document_processor import process_uploaded_file, load_url, chunk_documents
 from src.vector_store import (
     get_or_create_collection,
     add_documents,
     remove_document,
     get_indexed_files,
-    query_vector_store,
     delete_collection,
     list_session_collections,
 )
-from src.rag_chain import answer_question
+from src.rag_chain import answer_question, generate_document_summary
 from src.settings import SESSION_CLEANUP_AGE_HOURS
 import os
 import json
@@ -199,6 +198,33 @@ with st.sidebar:
 
     uploaded_file = st.file_uploader("Upload a document", type=["pdf", "txt", "docx"])
 
+    # URL input
+    with st.expander("Or paste a URL"):
+        url_input = st.text_input("Enter a webpage URL", key="url_input", label_visibility="collapsed")
+        if url_input and url_input not in st.session_state.processed_files:
+            with st.spinner(f"Loading {url_input}…"):
+                try:
+                    pages = load_url(url_input)
+                    chunks = chunk_documents(pages)
+                    # Use URL as the "filename" for source tracking
+                    url_name = url_input.split("//")[-1].split("/")[0][:50]
+                    add_documents(
+                        st.session_state.collection,
+                        chunks,
+                        filename=url_name,
+                    )
+                    st.session_state.messages = []
+                    st.session_state.processed_files.add(url_input)
+                    st.success(f"✓ {url_name} indexed")
+                    refresh_indexed_files()
+
+                    with st.spinner("Generating summary…"):
+                        summary = generate_document_summary(chunks)
+                        if summary:
+                            st.markdown(summary)
+                except Exception as e:
+                    st.error(f"Failed to load URL: {e}")
+
     if uploaded_file:
         if uploaded_file.name not in st.session_state.processed_files:
             with st.spinner(f"Embedding {uploaded_file.name}…"):
@@ -213,6 +239,12 @@ with st.sidebar:
                     st.session_state.processed_files.add(uploaded_file.name)
                     st.success(f"✓ {uploaded_file.name} added")
                     refresh_indexed_files()
+
+                    # Generate and show summary
+                    with st.spinner("Generating summary…"):
+                        summary = generate_document_summary(chunks)
+                        if summary:
+                            st.markdown(summary)
                 except ValueError as e:
                     logger.exception("Upload validation failed")
                     st.error(str(e))
@@ -259,6 +291,17 @@ with st.sidebar:
             label_visibility="collapsed",
         )
         st.session_state.selected_docs = selected if selected else None
+
+    # ── Answer quality indicator ──
+    rated_msgs = [m for m in st.session_state.messages if m.get("feedback") and m["role"] == "assistant"]
+    if rated_msgs:
+        ups = sum(1 for m in rated_msgs if m["feedback"] == "up")
+        downs = sum(1 for m in rated_msgs if m["feedback"] == "down")
+        total = ups + downs
+        pct = round(ups / total * 100) if total > 0 else 0
+        st.divider()
+        st.markdown("**Feedback**")
+        st.caption(f"👍 {ups} / 👎 {downs} — {pct}% helpful")
 
 
 # ── Main chat area ─────────────────────────────────────────────────────────
@@ -327,16 +370,21 @@ else:
 
         with st.chat_message("assistant"):
             placeholder = st.empty()
+            source_docs = []
             full_response = ""
             placeholder.markdown("Thinking...")
 
             try:
-                for token in answer_question(
+                for item in answer_question(
                     st.session_state.collection,
                     question,
                     st.session_state.messages,
                     filter_sources=st.session_state.selected_docs,
                 ):
+                    if item.get("type") == "sources":
+                        source_docs = item.get("data", [])
+                        continue
+                    token = item.get("data", "")
                     full_response += token
                     placeholder.markdown(full_response + "▌")
             except Exception as e:
@@ -345,19 +393,14 @@ else:
             finally:
                 placeholder.markdown(full_response)
 
-            if indexed_files:
-                with st.expander("Sources"):
-                    try:
-                        source_docs = query_vector_store(
-                            st.session_state.collection, question, k=3
-                        )
-                        for i, doc in enumerate(source_docs):
-                            filename = doc.metadata.get("source", "document")
-                            page = doc.metadata.get("page", "?")
-                            st.markdown(f"**{i+1}. {filename} (page {page})**")
-                            st.caption(doc.page_content[:300])
-                    except Exception:
-                        pass
+            # Show inline source footnotes (not collapsed, not a second query)
+            if source_docs:
+                source_html = '<div style="margin-top: 12px; padding: 8px 12px; background: #1e1e1e; border-radius: 8px; font-size: 13px;">'
+                source_html += '<strong>Sources:</strong><br>'
+                for i, s in enumerate(source_docs, start=1):
+                    source_html += f'<sup>{i}</sup> {s["filename"]} (page {s["page"]})<br>'
+                source_html += '</div>'
+                st.markdown(source_html, unsafe_allow_html=True)
 
         st.session_state.messages.append({
             "role": "assistant",

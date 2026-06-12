@@ -257,6 +257,7 @@ def query_vector_store(
 
     bm25_docs = query_bm25(collection, query, k=k, filter_sources=filter_sources)
     if not bm25_docs:
+        logger.warning("BM25 search returned no results — hybrid fusion skipped")
         return vector_docs
 
     return _rrf_fuse(vector_docs, bm25_docs)

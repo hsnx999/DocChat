@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import List
 import logging
 
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 
@@ -69,6 +69,28 @@ def load_docx(file_path: str) -> List[Document]:
             "python-docx is required to process .docx files "
             "(pip install python-docx)."
         )
+
+
+def load_url(url: str) -> List[Document]:
+    """
+    Load text content from a URL.
+    Return a Document with the page content and URL as source.
+    """
+    try:
+        loader = WebBaseLoader(url)
+        docs = loader.load()
+        for doc in docs:
+            doc.metadata["source"] = url
+            doc.metadata["page"] = 1
+        return docs
+    except ImportError:
+        raise ValueError(
+            "langchain_community is required to load URLs "
+            "(pip install langchain-community)."
+        )
+    except Exception as e:
+        logger.exception("Failed to load URL: %s", url)
+        raise ValueError(f"Failed to load URL: {e}")
 
 
 def chunk_documents(

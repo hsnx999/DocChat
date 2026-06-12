@@ -158,23 +158,47 @@ def _is_safe_input(text: str) -> bool:
     return True
 
 
+def generate_document_summary(chunks: List[Document]) -> str:
+    """
+    Generate a 5-bullet TL;DR summary of a document from its first chunks.
+    """
+    if not chunks:
+        return "(empty document)"
+
+    # Take first ~2000 chars from the document
+    text = " ".join(c.page_content for c in chunks[:5])[:2000]
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "Give a concise 5-bullet summary of this document. Use plain bullets starting with '•'. Be specific."),
+        ("human", "{text}"),
+    ])
+
+    try:
+        llm = get_llm()
+        response = llm.invoke(prompt.format_messages(text=text))
+        return response.content.strip()
+    except Exception:
+        logger.exception("Failed to generate document summary")
+        return ""
+
 
 def answer_question(
     collection: chromadb.Collection,
     question: str,
     chat_history: list,
     filter_sources: Optional[list[str]] = None,
-) -> Generator[str, None, None]:
+) -> Generator[dict, None, None]:
     """
     Full RAG pipeline with memory:
       1. Condense question using chat history
       2. Retrieve relevant chunks using condensed question
       3. Re-rank retrieved chunks
+      3b. Yield source metadata (filenames, pages)
       4. Stream answer using chunks + original question
     """
     # Step 0 — prompt injection guard
     if not _is_safe_input(question):
-        yield "I can't answer that."
+        yield {"type": "token", "data": "I can't answer that."}
         return
 
     # Step 1 — rewrite vague follow-ups into standalone questions
@@ -188,6 +212,15 @@ def answer_question(
     # Step 3 — re-rank retrieved chunks
     docs = rerank_docs(standalone_question, docs)
 
+    # Step 3b — yield source metadata for frontend citation display
+    sources = []
+    for doc in docs:
+        source = doc.metadata.get("source", "document")
+        page = doc.metadata.get("page", "?")
+        filename = source.split("/")[-1]
+        sources.append({"filename": filename, "page": page})
+    yield {"type": "sources", "data": sources}
+
     # Step 4 — format context and build the answer prompt
     context = format_context(docs)
     prompt = QA_PROMPT.format_messages(
@@ -198,4 +231,4 @@ def answer_question(
     # Step 5 — stream the answer
     llm = get_llm()
     for chunk in llm.stream(prompt):
-        yield chunk.content
+        yield {"type": "token", "data": chunk.content}

@@ -25,6 +25,10 @@ Built from scratch as a portfolio project to learn production RAG architecture.
                                model, improving answer quality by surfacing the
                                most relevant passages first.
 
+    Hybrid retrieval           BM25 keyword search fuses with vector similarity
+                               via Reciprocal Rank Fusion, improving accuracy on
+                               documents with specific names, numbers, or dates.
+
     Conversation memory        Follow-up questions work in context. A condensing
                                step rewrites vague follow-ups like "tell me more
                                about the second one" into standalone queries before
@@ -57,7 +61,8 @@ At query time (runs on every question):
 
     5. Condense   Chat history + question rewritten as a standalone query
     6. Retrieve   Condensed query embedded, top-k chunks found via cosine similarity
-                  across selected documents (or all if none selected)
+                  combined with BM25 keyword search (RRF fusion). Searches across
+                  selected documents only (or all if none selected).
     7. Re-rank    Cross-encoder scores each retrieved chunk against the query;
                   only the top 4 most relevant pass to generation
     8. Generate   Selected chunks injected into prompt, LLaMA 3.1 streams the answer
@@ -103,6 +108,7 @@ Test cases cover RAG architecture concepts. Swap the PDF and questions to score 
     Library                       Role
     LangChain                     Pipeline orchestration
     ChromaDB                      Local persistent vector database
+    rank-bm25                     BM25 keyword search for hybrid retrieval
     HuggingFace all-MiniLM-L6-v2  Lightweight local embeddings (no API cost)
     Cross-Encoder MiniLM-L6-v2    Re-ranks retrieved chunks for precision
     Groq LLaMA 3.1 8B             Fast, free LLM inference
