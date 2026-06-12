@@ -225,7 +225,6 @@ with st.sidebar:
                 st.session_state.messages = []
                 st.session_state.processed_files.add(url_input)
                 st.success(f"✓ {url_name} indexed")
-                st.session_state.url_input = ""
                 refresh_indexed_files()
 
                 with st.spinner("Generating summary…"):
@@ -289,6 +288,8 @@ with st.sidebar:
                     remove_document(st.session_state.collection, fname)
                 st.session_state.messages = []
                 st.session_state.processed_files.clear()
+                if url_input:
+                    st.session_state.processed_files.add(url_input)
                 refresh_indexed_files()
                 st.rerun()
 

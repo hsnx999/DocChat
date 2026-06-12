@@ -2,6 +2,7 @@ from typing import List, Optional
 from langchain.schema import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 import chromadb
+from chromadb.errors import InvalidCollectionException
 import logging
 from src.settings import CHROMA_PERSIST_DIR, COLLECTION_NAME, EMBEDDING_MODEL, RETRIEVE_K, BM25_K, HYBRID_ALPHA
 
@@ -172,6 +173,22 @@ def add_documents(
     ids = [f"{filename}_chunk_{i}" for i in range(len(chunks))]
 
     try:
+        embeddings_model = get_embeddings()
+        vectors = embeddings_model.embed_documents(texts)
+        collection.add(
+            documents=texts,
+            embeddings=vectors,
+            metadatas=metadatas,
+            ids=ids,
+        )
+    except InvalidCollectionException:
+        logger.warning(
+            "Collection '%s' was deleted, recreating and retrying",
+            collection.name,
+        )
+        collection = get_or_create_collection(
+            collection.name.removeprefix("session_")
+        )
         embeddings_model = get_embeddings()
         vectors = embeddings_model.embed_documents(texts)
         collection.add(
