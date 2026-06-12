@@ -136,6 +136,7 @@ def list_provider_models(provider: str, api_key: str = "") -> list[str]:
             req = urllib.request.Request(url)
         else:
             req = urllib.request.Request(endpoint)
+            req.add_header("User-Agent", "DocChat/1.0")
             if provider == "claude":
                 req.add_header("x-api-key", api_key)
                 req.add_header("anthropic-version", "2023-06-01")
