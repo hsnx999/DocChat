@@ -255,7 +255,7 @@ def generate_document_summary(chunks: List[Document], model_name: str = "", prov
     text = " ".join(c.page_content for c in chunks[:5])[:2000]
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "Give a concise 5-bullet summary of this document. Start each bullet on its own separate line with '•'. Put every bullet on a new line. Do not put multiple bullets on the same line. No blank lines between bullets. Be specific."),
+        ("system", "Give a concise 5-bullet summary of this document. Format your response EXACTLY like this example:\n• First bullet point here\n• Second bullet point here\n• Third bullet point here\n• Fourth bullet point here\n• Fifth bullet point here\nBe specific."),
         ("human", "{text}"),
     ])
 
