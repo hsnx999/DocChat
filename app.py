@@ -424,7 +424,6 @@ else:
             "sources": source_docs,
         })
         _save_chat()
-        st.rerun()
 
         if len(st.session_state.messages) > 100:
             st.session_state.messages = st.session_state.messages[-100:]
