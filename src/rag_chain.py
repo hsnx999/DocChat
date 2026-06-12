@@ -152,7 +152,7 @@ def list_provider_models(provider: str, api_key: str = "") -> list[str]:
                 for m in data.get("models", [])
                 if "generateContent" in m.get("supportedGenerationMethods", [])
             ]
-            return [m["id"] for m in data.get("data", [])]
+        return [m["id"] for m in data.get("data", [])]
     except Exception as e:
         status = getattr(e, "code", "?")
         logger.exception("Failed to list models for %s (HTTP %s)", provider, status)
