@@ -235,26 +235,22 @@ with st.sidebar:
             )
             st.session_state.api_keys[sel_prov] = api_key
 
-            fetch_col1, fetch_col2 = st.columns([1, 1])
-            with fetch_col1:
-                if st.button(
-                    "Fetch Models",
-                    key=f"fetch_{sel_prov}",
-                    use_container_width=True,
-                    disabled=not api_key,
-                ):
-                    with st.spinner("Fetching models..."):
-                        models = list_provider_models(sel_prov, api_key)
-                        st.session_state.provider_models[sel_prov] = models
-                    if models:
-                        st.success(f"Loaded {len(models)} models")
-                    else:
-                        st.error("No models found. Check your API key.")
-            with fetch_col2:
-                if api_key:
-                    st.caption("✅ Key set")
-                else:
-                    st.caption("Enter a key")
+            if st.button(
+                "Fetch Models",
+                key=f"fetch_{sel_prov}",
+                use_container_width=True,
+                disabled=not api_key,
+            ):
+                with st.spinner("Fetching models..."):
+                    models = list_provider_models(sel_prov, api_key)
+                st.session_state.provider_models[sel_prov] = models
+                if not models:
+                    st.error("No models found. Check your API key.")
+
+            if api_key and st.session_state.provider_models.get(sel_prov):
+                st.success(f"{len(st.session_state.provider_models[sel_prov])} models available")
+            elif api_key:
+                st.caption("Click Fetch Models to load available models")
 
         if sel_prov == "ollama":
             current_base = st.session_state.api_keys.get("ollama_base_url", "http://localhost:11434")
