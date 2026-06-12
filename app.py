@@ -395,7 +395,7 @@ else:
 
             # Show inline source footnotes (not collapsed, not a second query)
             if source_docs:
-                source_html = '<div style="margin-top: 12px; padding: 8px 12px; background: #1e1e1e; border-radius: 8px; font-size: 13px;">'
+                source_html = '<div style="margin-top: 12px; padding: 8px 12px; background: rgba(128,128,128,0.1); border-radius: 8px; font-size: 13px;">'
                 source_html += '<strong>Sources:</strong><br>'
                 for i, s in enumerate(source_docs, start=1):
                     source_html += f'<sup>{i}</sup> {s["filename"]} (page {s["page"]})<br>'

@@ -29,6 +29,9 @@ Built from scratch as a portfolio project to learn production RAG architecture.
                                via Reciprocal Rank Fusion, improving accuracy on
                                documents with specific names, numbers, or dates.
 
+    Document TL;DR             Every uploaded document gets an instant 5-bullet
+                               AI summary so you know what was indexed.
+
     Conversation memory        Follow-up questions work in context. A condensing
                                step rewrites vague follow-ups like "tell me more
                                about the second one" into standalone queries before
