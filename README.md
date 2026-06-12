@@ -10,7 +10,7 @@ are grounded strictly in the documents, no hallucination from general
 training data, and the pipeline is backed by automated RAGAS evaluation
 scores.
 
-🔗 **[Live Demo →](https://hsnx999-rag-chatbot.streamlit.app)**
+🔗 **[Live Demo →](https://hsnx999-DocChat.streamlit.app)**
 
 ---
 
@@ -121,7 +121,7 @@ Run the evaluation yourself:
 
 Test cases cover RAG architecture concepts. Swap the PDF and questions to score your own document.
 
-[![CI](https://github.com/hsnx999/rag-chatbot/actions/workflows/eval.yml/badge.svg)](https://github.com/hsnx999/rag-chatbot/actions/workflows/eval.yml)
+[![CI](https://github.com/hsnx999/DocChat/actions/workflows/eval.yml/badge.svg)](https://github.com/hsnx999/DocChat/actions/workflows/eval.yml)
 
 
 ---
@@ -149,8 +149,8 @@ Prerequisites: Python 3.10+ and a free Groq API key from console.groq.com
 
 Clone and set up:
 
-    git clone https://github.com/hsnx999/rag-chatbot.git
-    cd rag-chatbot
+    git clone https://github.com/hsnx999/DocChat.git
+    cd DocChat
     python -m venv .venv
     source .venv/bin/activate
     pip install -r requirements.txt
@@ -186,7 +186,7 @@ persisted as Docker volumes.
 
 ## Project structure
 
-    rag-chatbot/
+    DocChat/
     ├── app.py                      Streamlit UI, session state, multi-doc sidebar
     ├── evaluate.py                 RAGAS evaluation script
     ├── Dockerfile                  Container image definition
