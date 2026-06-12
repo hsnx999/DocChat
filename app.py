@@ -103,20 +103,10 @@ st.markdown(
     /* Prevent collapsed sidebar toggle from covering title */
     .stApp .main .block-container { padding-left: 4rem !important; }
 
-    /* Sidebar: collapse on narrow screens */
+        /* Sidebar: collapse on narrow screens */
     @media (max-width: 768px) {
         /* Pull main content left — sidebar toggle is smaller on mobile */
         .stApp .main .block-container { padding-left: 1rem !important; }
-
-        /* Sidebar full-width overlay */
-        section[data-testid="stSidebar"] {
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-        }
-        section[data-testid="stSidebar"] > div:first-child {
-            padding: 0.5rem !important;
-        }
 
         /* Main content padding */
         .main .block-container {
