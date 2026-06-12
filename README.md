@@ -6,8 +6,6 @@ are grounded strictly in the documents — no hallucination from general
 training data — and the pipeline is backed by automated RAGAS evaluation
 scores.
 
-Built from scratch as a portfolio project to learn production RAG architecture.
-
 🔗 **[Live Demo →](https://hsnx999-rag-chatbot.streamlit.app)**
 
 ![CI](https://github.com/hsnx999/rag-chatbot/actions/workflows/eval.yml/badge.svg)
@@ -15,8 +13,9 @@ Built from scratch as a portfolio project to learn production RAG architecture.
 
 ## Features
 
-    Multi-format upload        Upload PDF, TXT, and DOCX files. Query across
-                               all of them in a single chat session.
+    Multi-format upload        Upload PDF, TXT, and DOCX files or paste a URL
+                               to fetch web pages and PDFs. Query across all of
+                               them in a single chat session.
 
     Document subset filter     Choose which indexed documents to search against
                                for each question using a sidebar multiselect.
@@ -31,6 +30,9 @@ Built from scratch as a portfolio project to learn production RAG architecture.
 
     Document TL;DR             Every uploaded document gets an instant 5-bullet
                                AI summary so you know what was indexed.
+
+    URL ingestion              Paste any webpage or PDF URL and chat with it
+                               instantly — no file download needed.
 
     Conversation memory        Follow-up questions work in context. A condensing
                                step rewrites vague follow-ups like "tell me more
@@ -53,22 +55,24 @@ Built from scratch as a portfolio project to learn production RAG architecture.
 
 ## How it works
 
-At upload time (runs once per document):
+At upload time (runs once per document, including URLs):
 
-    1. Load    PyPDF / python-docx / plain-text reader parses the document
+    1. Load    PyPDF / python-docx / plain-text reader for files, or WebBaseLoader /
+               urllib for URLs (PDF and HTML supported)
     2. Chunk   Text split into 1000-char segments with 200-char overlap
     3. Embed   Each chunk converted to a vector using all-MiniLM-L6-v2
-    4. Store   Vectors saved to ChromaDB on disk, tagged with source filename
+    4. Summarize  A 5-bullet TL;DR is generated and shown in the chat
+    5. Store   Vectors saved to ChromaDB on disk, tagged with source filename
 
 At query time (runs on every question):
 
-    5. Condense   Chat history + question rewritten as a standalone query
-    6. Retrieve   Condensed query embedded, top-k chunks found via cosine similarity
-                  combined with BM25 keyword search (RRF fusion). Searches across
-                  selected documents only (or all if none selected).
-    7. Re-rank    Cross-encoder scores each retrieved chunk against the query;
-                  only the top 4 most relevant pass to generation
-    8. Generate   Selected chunks injected into prompt, LLaMA 3.1 streams the answer
+     5. Condense   Chat history + question rewritten as a standalone query
+     6. Retrieve   Condensed query embedded, top-6 chunks found via cosine similarity
+                   combined with BM25 keyword search (RRF fusion). Searches across
+                   selected documents only (or all if none selected).
+     7. Re-rank    Cross-encoder scores each retrieved chunk against the query;
+                   only the top 4 most relevant pass to generation
+     8. Generate   Selected chunks injected into prompt, LLaMA 3.1 streams the answer
 
 The 200-character overlap between chunks ensures answers that span chunk
 boundaries are never missed.
@@ -112,6 +116,7 @@ Test cases cover RAG architecture concepts. Swap the PDF and questions to score 
     LangChain                     Pipeline orchestration
     ChromaDB                      Local persistent vector database
     rank-bm25                     BM25 keyword search for hybrid retrieval
+    beautifulsoup4 / lxml         HTML parsing for URL web page ingestion
     HuggingFace all-MiniLM-L6-v2  Lightweight local embeddings (no API cost)
     Cross-Encoder MiniLM-L6-v2    Re-ranks retrieved chunks for precision
     Groq LLaMA 3.1 8B             Fast, free LLM inference
@@ -176,29 +181,11 @@ persisted as Docker volumes.
     │   └── test_vector_store.py
     ├── src/
     │   ├── settings.py             Centralized configuration constants
-    │   ├── document_processor.py   PDF/TXT/DOCX loading, chunking, upload handler
-    │   ├── vector_store.py         ChromaDB operations: add, remove, query, list
+    │   ├── document_processor.py   PDF/TXT/DOCX/URL loading, chunking, upload handler
+    │   ├── vector_store.py         ChromaDB operations: add, remove, query, BM25+RRF hybrid
     │   └── rag_chain.py            Question condensing, re-ranking, prompt templates, LLM streaming
+    ├── scripts/
+    │   └── update_readme_scores.py CI helper for auto-updating evaluation scores
+    ├── .github/workflows/eval.yml  CI pipeline: tests → RAGAS eval → update README
     ├── requirements.txt
     └── .env.example
-
----
-
-## What I learned building this
-
-- How RAG works at the implementation level, not just conceptually
-- Why chunk overlap matters for retrieval quality at chunk boundaries
-- How vector similarity search finds semantically related text
-  even when the exact words do not match
-- How cross-encoder re-ranking improves retrieval precision over pure vector search
-- How to implement conversation memory using a question condensing step
-  so follow-up questions resolve correctly
-- How to support multiple document formats (PDF, TXT, DOCX) with format-specific
-  parsing and validation
-- How to build multi-document retrieval with per-file metadata tagging
-  and subset filtering at query time
-- How to quantitatively evaluate a RAG pipeline using RAGAS metrics
-- How to stream LLM responses token by token in a Streamlit UI
-- How to write unit tests for RAG components with mocked dependencies
-- Debugging Python 3.13 dependency conflicts across a complex
-  ML library ecosystem
