@@ -96,7 +96,7 @@ def get_llm(provider: str = "", model_name: str = "", api_key: str = "", base_ur
     kwargs = {"model": name, "temperature": LLM_TEMPERATURE}
     if provider == "ollama":
         kwargs["base_url"] = base_url
-    elif provider in ("openai", "deepseek"):
+    elif provider in ("openai", "deepseek", "groq"):
         kwargs["api_key"] = api_key
         if base_url:
             kwargs["base_url"] = base_url

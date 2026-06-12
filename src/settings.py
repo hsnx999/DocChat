@@ -2,18 +2,25 @@ import os
 
 # ── Provider configuration ─────────────────────────────────────────
 PROVIDER_CONFIG = {
-    "ollama": {
-        "name": "Ollama (Local)",
-        "key_env": None,
-        "base_url_default": "http://localhost:11434",
-        "list_endpoint": None,
-        "class_path": ("langchain_ollama", "ChatOllama"),
-    },
     "openai": {
         "name": "OpenAI",
         "key_env": "OPENAI_API_KEY",
         "base_url_default": "",
         "list_endpoint": "https://api.openai.com/v1/models",
+        "class_path": ("langchain_openai", "ChatOpenAI"),
+    },
+    "groq": {
+        "name": "Groq (Free Tier)",
+        "key_env": "GROQ_API_KEY",
+        "base_url_default": "https://api.groq.com/openai/v1",
+        "list_endpoint": "https://api.groq.com/openai/v1/models",
+        "class_path": ("langchain_groq", "ChatGroq"),
+    },
+    "opencode": {
+        "name": "OpenCode Zen",
+        "key_env": "OPENCODE_API_KEY",
+        "base_url_default": "https://opencode.ai/zen/v1",
+        "list_endpoint": "https://opencode.ai/zen/v1/models",
         "class_path": ("langchain_openai", "ChatOpenAI"),
     },
     "deepseek": {
@@ -36,6 +43,13 @@ PROVIDER_CONFIG = {
         "base_url_default": "",
         "list_endpoint": "https://generativelanguage.googleapis.com/v1beta/models",
         "class_path": ("langchain_google_genai", "ChatGoogleGenerativeAI"),
+    },
+    "ollama": {
+        "name": "Ollama (Local)",
+        "key_env": None,
+        "base_url_default": "http://localhost:11434",
+        "list_endpoint": None,
+        "class_path": ("langchain_ollama", "ChatOllama"),
     },
 }
 

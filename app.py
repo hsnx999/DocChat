@@ -208,7 +208,6 @@ def refresh_indexed_files():
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### DocChat")
     with st.popover("⚙️ Settings", use_container_width=True):
         st.markdown("#### Provider")
 
