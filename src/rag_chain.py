@@ -6,7 +6,7 @@ from langchain_ollama import ChatOllama
 from langchain.prompts import ChatPromptTemplate
 
 from src.vector_store import query_vector_store
-from src.settings import LLM_MODEL, LLM_TEMPERATURE, OLLAMA_BASE_URL, RETRIEVE_K, MAX_HISTORY_TURNS, RERANKER_MODEL, RERANK_TOP_K
+from src.settings import LLM_MODEL, LLM_TEMPERATURE, OLLAMA_BASE_URL, OLLAMA_MODELS, RETRIEVE_K, MAX_HISTORY_TURNS, RERANKER_MODEL, RERANK_TOP_K
 
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,7 @@ Context:
 ])
 
 _llm = None
+_llm_model = None
 _reranker = None
 
 
@@ -77,10 +78,12 @@ def rerank_docs(query: str, docs: List[Document], top_k: int = RERANK_TOP_K) -> 
     return [doc for _, doc in scored[:top_k]]
 
 
-def get_llm():
-    global _llm
-    if _llm is None:
-        _llm = ChatOllama(model=LLM_MODEL, temperature=LLM_TEMPERATURE, base_url=OLLAMA_BASE_URL)
+def get_llm(model_name: str = ""):
+    global _llm, _llm_model
+    name = model_name or LLM_MODEL
+    if _llm is None or _llm_model != name:
+        _llm = ChatOllama(model=name, temperature=LLM_TEMPERATURE, base_url=OLLAMA_BASE_URL)
+        _llm_model = name
     return _llm
 
 
@@ -158,7 +161,7 @@ def _is_safe_input(text: str) -> bool:
     return True
 
 
-def generate_document_summary(chunks: List[Document]) -> str:
+def generate_document_summary(chunks: List[Document], model_name: str = "") -> str:
     """
     Generate a 5-bullet TL;DR summary of a document from its first chunks.
     """
@@ -174,7 +177,7 @@ def generate_document_summary(chunks: List[Document]) -> str:
     ])
 
     try:
-        llm = get_llm()
+        llm = get_llm(model_name)
         response = llm.invoke(prompt.format_messages(text=text))
         return response.content.strip()
     except Exception:
@@ -187,6 +190,7 @@ def answer_question(
     question: str,
     chat_history: list,
     filter_sources: Optional[list[str]] = None,
+    model_name: str = "",
 ) -> Generator[dict, None, None]:
     """
     Full RAG pipeline with memory:
@@ -229,6 +233,6 @@ def answer_question(
     )
 
     # Step 5 — stream the answer
-    llm = get_llm()
+    llm = get_llm(model_name)
     for chunk in llm.stream(prompt):
         yield {"type": "token", "data": chunk.content}

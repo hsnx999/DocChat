@@ -18,7 +18,7 @@ from src.vector_store import (
     list_session_collections,
 )
 from src.rag_chain import answer_question, generate_document_summary
-from src.settings import SESSION_CLEANUP_AGE_HOURS
+from src.settings import SESSION_CLEANUP_AGE_HOURS, OLLAMA_MODELS
 import json
 import uuid
 import shutil
@@ -189,6 +189,8 @@ if "indexed_files" not in st.session_state:
     st.session_state.indexed_files = get_indexed_files(st.session_state.collection)
 if "selected_docs" not in st.session_state:
     st.session_state.selected_docs = None
+if "selected_model" not in st.session_state:
+    st.session_state.selected_model = OLLAMA_MODELS[0]
 
 
 def refresh_indexed_files():
@@ -197,6 +199,13 @@ def refresh_indexed_files():
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
+    st.selectbox(
+        "Model",
+        options=OLLAMA_MODELS,
+        key="selected_model",
+        help="Select the Ollama model to use. Pull new models with `ollama pull <name>` and add them to OLLAMA_MODELS in src/settings.py.",
+    )
+
     # ── Upload ──
     st.markdown("#### 📤 Upload")
     uploaded_file = st.file_uploader("Choose a file", type=["pdf", "txt", "docx"],
@@ -223,7 +232,7 @@ with st.sidebar:
                 refresh_indexed_files()
 
                 with st.spinner("Generating summary…"):
-                    summary = generate_document_summary(chunks)
+                    summary = generate_document_summary(chunks, model_name=st.session_state.selected_model)
                     if summary:
                         st.session_state.messages.append({
                             "role": "assistant",
@@ -245,7 +254,7 @@ with st.sidebar:
                     refresh_indexed_files()
 
                     with st.spinner("Generating summary…"):
-                        summary = generate_document_summary(chunks)
+                        summary = generate_document_summary(chunks, model_name=st.session_state.selected_model)
                         if summary:
                             st.session_state.messages.append({
                                 "role": "assistant",
@@ -401,6 +410,7 @@ else:
                     question,
                     st.session_state.messages,
                     filter_sources=st.session_state.selected_docs,
+                    model_name=st.session_state.selected_model,
                 ):
                     if item.get("type") == "sources":
                         source_docs = item.get("data", [])
