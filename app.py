@@ -246,11 +246,10 @@ with st.sidebar:
                     with st.spinner("Fetching models..."):
                         models = list_provider_models(sel_prov, api_key)
                         st.session_state.provider_models[sel_prov] = models
-                        if not models:
-                            st.error("No models found. Check your API key.")
-                        else:
-                            st.success(f"Loaded {len(models)} models")
-                            st.rerun()
+                    if models:
+                        st.success(f"Loaded {len(models)} models")
+                    else:
+                        st.error("No models found. Check your API key.")
             with fetch_col2:
                 if api_key:
                     st.caption("✅ Key set")
