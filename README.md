@@ -155,9 +155,9 @@ Clone and set up:
     source .venv/bin/activate
     pip install -r requirements.txt
 
-Create a .env file:
+Create a .env file from the template:
 
-    GROQ_API_KEY=your_key_here
+    cp .env.example .env
 
 Run the app:
 
