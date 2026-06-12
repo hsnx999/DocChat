@@ -17,8 +17,8 @@ from src.vector_store import (
     delete_collection,
     list_session_collections,
 )
-from src.rag_chain import answer_question, generate_document_summary, get_installed_models
-from src.settings import SESSION_CLEANUP_AGE_HOURS, LLM_MODEL
+from src.rag_chain import answer_question, generate_document_summary, get_installed_models, list_provider_models
+from src.settings import SESSION_CLEANUP_AGE_HOURS, PROVIDER_CONFIG, DEFAULT_PROVIDER, LLM_MODEL, LLM_TEMPERATURE, RETRIEVE_K
 import json
 import uuid
 import shutil
@@ -194,6 +194,12 @@ if "installed_models" not in st.session_state:
 if "selected_model" not in st.session_state:
     models = st.session_state.installed_models
     st.session_state.selected_model = models[0] if models else LLM_MODEL
+if "selected_provider" not in st.session_state:
+    st.session_state.selected_provider = DEFAULT_PROVIDER
+if "api_keys" not in st.session_state:
+    st.session_state.api_keys = {}
+if "provider_models" not in st.session_state:
+    st.session_state.provider_models = {}
 
 
 def refresh_indexed_files():
@@ -202,12 +208,83 @@ def refresh_indexed_files():
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.selectbox(
-        "Model",
-        options=st.session_state.installed_models,
-        key="selected_model",
-        help="Select the Ollama model to use. Pull new models with `ollama pull <name>` and they will appear here automatically.",
-    )
+    # Header with gear
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.markdown("### DocChat")
+    with col2:
+        with st.popover("⚙️", use_container_width=True):
+            st.markdown("#### Settings")
+
+            # Provider selection
+            provider_names = list(PROVIDER_CONFIG.keys())
+            current = provider_names.index(st.session_state.selected_provider) if st.session_state.selected_provider in provider_names else 0
+            sel_prov = st.selectbox(
+                "Provider", provider_names, index=current,
+                format_func=lambda p: PROVIDER_CONFIG[p]["name"],
+            )
+            st.session_state.selected_provider = sel_prov
+            cfg = PROVIDER_CONFIG[sel_prov]
+
+            # API key
+            if cfg["key_env"]:
+                current_key = st.session_state.api_keys.get(sel_prov, "")
+                api_key = st.text_input(
+                    f"API Key ({cfg['key_env']})",
+                    type="password", value=current_key,
+                    placeholder=f"Enter {cfg['key_env']}",
+                )
+                st.session_state.api_keys[sel_prov] = api_key
+
+                if st.button("Fetch Models", key=f"fetch_{sel_prov}"):
+                    if api_key:
+                        with st.spinner("Fetching models..."):
+                            models = list_provider_models(sel_prov, api_key)
+                            st.session_state.provider_models[sel_prov] = models
+                            st.rerun()
+
+            # Show available models
+            if sel_prov == "ollama":
+                models = st.session_state.installed_models
+            else:
+                models = st.session_state.provider_models.get(sel_prov, [])
+            if models:
+                st.caption(f"{len(models)} models")
+                st.caption(", ".join(models[:4]))
+            elif cfg["key_env"] and not st.session_state.api_keys.get(sel_prov):
+                st.caption("Set key and click Fetch")
+
+            # Ollama base URL
+            if sel_prov == "ollama":
+                current_base = st.session_state.api_keys.get("ollama_base_url", "http://localhost:11434")
+                base_url = st.text_input("Ollama Base URL", value=current_base)
+                st.session_state.api_keys["ollama_base_url"] = base_url
+
+            st.divider()
+            st.markdown("**Pipeline**")
+            st.number_input("Retrieve K", value=RETRIEVE_K, min_value=1, max_value=20, key="override_k")
+            st.slider("Temperature", 0.0, 2.0, LLM_TEMPERATURE, 0.1, key="override_temp")
+
+    # Quick provider + model selector
+    if not any(msg for msg in st.session_state.messages):
+        # Only show when no messages (avoid clutter during chat)
+        colp, colm = st.columns(2)
+        with colp:
+            pnames = list(PROVIDER_CONFIG.keys())
+            pi = pnames.index(st.session_state.selected_provider)
+            prov = st.selectbox("Provider", pnames, index=pi, key="quick_prov", label_visibility="collapsed")
+            st.session_state.selected_provider = prov
+        with colm:
+            if prov == "ollama":
+                mopts = st.session_state.installed_models
+            else:
+                mopts = st.session_state.provider_models.get(prov, [LLM_MODEL])
+            if not mopts:
+                mopts = [LLM_MODEL]
+            mi = mopts.index(st.session_state.selected_model) if st.session_state.selected_model in mopts else 0
+            st.selectbox("Model", mopts, index=mi, key="quick_model", label_visibility="collapsed")
+            if "quick_model" in st.session_state:
+                st.session_state.selected_model = st.session_state.quick_model
 
     # ── Upload ──
     st.markdown("#### 📤 Upload")
@@ -235,7 +312,12 @@ with st.sidebar:
                 refresh_indexed_files()
 
                 with st.spinner("Generating summary…"):
-                    summary = generate_document_summary(chunks, model_name=st.session_state.selected_model)
+                    summary = generate_document_summary(
+                        chunks,
+                        model_name=st.session_state.selected_model,
+                        provider=st.session_state.selected_provider,
+                        api_key=st.session_state.api_keys.get(st.session_state.selected_provider, ""),
+                    )
                     if summary:
                         st.session_state.messages.append({
                             "role": "assistant",
@@ -257,7 +339,12 @@ with st.sidebar:
                     refresh_indexed_files()
 
                     with st.spinner("Generating summary…"):
-                        summary = generate_document_summary(chunks, model_name=st.session_state.selected_model)
+                        summary = generate_document_summary(
+                            chunks,
+                            model_name=st.session_state.selected_model,
+                            provider=st.session_state.selected_provider,
+                            api_key=st.session_state.api_keys.get(st.session_state.selected_provider, ""),
+                        )
                         if summary:
                             st.session_state.messages.append({
                                 "role": "assistant",
@@ -414,6 +501,8 @@ else:
                     st.session_state.messages,
                     filter_sources=st.session_state.selected_docs,
                     model_name=st.session_state.selected_model,
+                    provider=st.session_state.selected_provider,
+                    api_key=st.session_state.api_keys.get(st.session_state.selected_provider, ""),
                 ):
                     if item.get("type") == "sources":
                         source_docs = item.get("data", [])

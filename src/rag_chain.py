@@ -2,11 +2,10 @@ from typing import Generator, List, Optional
 import logging
 import chromadb
 from langchain_core.documents import Document
-from langchain_ollama import ChatOllama
 from langchain.prompts import ChatPromptTemplate
 
 from src.vector_store import query_vector_store
-from src.settings import LLM_MODEL, LLM_TEMPERATURE, OLLAMA_BASE_URL, RETRIEVE_K, MAX_HISTORY_TURNS, RERANKER_MODEL, RERANK_TOP_K
+from src.settings import LLM_MODEL, LLM_TEMPERATURE, PROVIDER_CONFIG, DEFAULT_PROVIDER, OLLAMA_BASE_URL, RETRIEVE_K, MAX_HISTORY_TURNS, RERANKER_MODEL, RERANK_TOP_K
 
 
 logger = logging.getLogger(__name__)
@@ -78,13 +77,80 @@ def rerank_docs(query: str, docs: List[Document], top_k: int = RERANK_TOP_K) -> 
     return [doc for _, doc in scored[:top_k]]
 
 
-def get_llm(model_name: str = ""):
+def get_llm(provider: str = "", model_name: str = "", api_key: str = "", base_url: str = ""):
+    """Factory for LLM instances across all providers. Lazy-imports provider packages."""
     global _llm, _llm_model
+    provider = provider or DEFAULT_PROVIDER
     name = model_name or LLM_MODEL
-    if _llm is None or _llm_model != name:
-        _llm = ChatOllama(model=name, temperature=LLM_TEMPERATURE, base_url=OLLAMA_BASE_URL)
-        _llm_model = name
+
+    cache_key = f"{provider}:{name}:{api_key}"
+    if _llm is not None and _llm_model == cache_key:
+        return _llm
+
+    cfg = PROVIDER_CONFIG[provider]
+    pkg, cls = cfg["class_path"]
+    mod = __import__(pkg, fromlist=[cls])
+    ChatClass = getattr(mod, cls)
+    base_url = base_url or cfg.get("base_url_default", "") or OLLAMA_BASE_URL
+
+    kwargs = {"model": name, "temperature": LLM_TEMPERATURE}
+    if provider == "ollama":
+        kwargs["base_url"] = base_url
+    elif provider in ("openai", "deepseek"):
+        kwargs["api_key"] = api_key
+        if base_url:
+            kwargs["base_url"] = base_url
+    elif provider == "claude":
+        kwargs["api_key"] = api_key
+    elif provider == "gemini":
+        kwargs["api_key"] = api_key
+        kwargs["model"] = f"models/{name}" if not name.startswith("models/") else name
+
+    _llm = ChatClass(**kwargs)
+    _llm_model = cache_key
     return _llm
+
+
+def list_provider_models(provider: str, api_key: str = "") -> list[str]:
+    """Fetch available chat models from a provider's API. Ollama uses local list."""
+    if provider == "ollama":
+        try:
+            import ollama
+            return [m["model"] for m in ollama.list().get("models", [])]
+        except Exception:
+            logger.exception("Failed to list Ollama models")
+            return [LLM_MODEL]
+
+    cfg = PROVIDER_CONFIG[provider]
+    endpoint = cfg["list_endpoint"]
+
+    try:
+        import urllib.request, json
+
+        if provider == "gemini":
+            url = f"{endpoint}?key={api_key}"
+            req = urllib.request.Request(url)
+        else:
+            req = urllib.request.Request(endpoint)
+            if provider == "claude":
+                req.add_header("x-api-key", api_key)
+                req.add_header("anthropic-version", "2023-06-01")
+            else:
+                req.add_header("Authorization", f"Bearer {api_key}")
+
+        with urllib.request.urlopen(req) as resp:
+            data = json.loads(resp.read())
+
+        if provider == "gemini":
+            return [
+                m["name"].replace("models/", "")
+                for m in data.get("models", [])
+                if "generateContent" in m.get("supportedGenerationMethods", [])
+            ]
+        return [m["id"] for m in data.get("data", [])]
+    except Exception:
+        logger.exception("Failed to list models for %s", provider)
+        return []
 
 
 def get_installed_models() -> list[str]:
@@ -172,7 +238,7 @@ def _is_safe_input(text: str) -> bool:
     return True
 
 
-def generate_document_summary(chunks: List[Document], model_name: str = "") -> str:
+def generate_document_summary(chunks: List[Document], model_name: str = "", provider: str = "", api_key: str = "") -> str:
     """
     Generate a 5-bullet TL;DR summary of a document from its first chunks.
     """
@@ -188,7 +254,7 @@ def generate_document_summary(chunks: List[Document], model_name: str = "") -> s
     ])
 
     try:
-        llm = get_llm(model_name)
+        llm = get_llm(provider=provider, model_name=model_name, api_key=api_key)
         response = llm.invoke(prompt.format_messages(text=text))
         return response.content.strip()
     except Exception:
@@ -202,6 +268,8 @@ def answer_question(
     chat_history: list,
     filter_sources: Optional[list[str]] = None,
     model_name: str = "",
+    provider: str = "",
+    api_key: str = "",
 ) -> Generator[dict, None, None]:
     """
     Full RAG pipeline with memory:
@@ -244,6 +312,6 @@ def answer_question(
     )
 
     # Step 5 — stream the answer
-    llm = get_llm(model_name)
+    llm = get_llm(provider=provider, model_name=model_name, api_key=api_key)
     for chunk in llm.stream(prompt):
         yield {"type": "token", "data": chunk.content}

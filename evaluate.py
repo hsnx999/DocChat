@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
 
 from datasets import Dataset
-from src.settings import LLM_MODEL, EMBEDDING_MODEL, RETRIEVE_K, OLLAMA_BASE_URL
+from src.settings import LLM_MODEL, EMBEDDING_MODEL, RETRIEVE_K
 from ragas import evaluate
 from ragas.metrics import faithfulness, answer_relevancy, context_precision
 from ragas.run_config import RunConfig
@@ -150,7 +150,7 @@ def main():
     })
 
     llm = LangchainLLMWrapper(
-        ChatOllama(model=LLM_MODEL, temperature=0.0, base_url=OLLAMA_BASE_URL)
+        ChatOllama(model=LLM_MODEL, temperature=0.0)
     )
     embeddings = LangchainEmbeddingsWrapper(
         HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
