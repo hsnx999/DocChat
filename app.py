@@ -339,7 +339,9 @@ else:
                         with save_col:
                             if st.button("Save", key=f"save_{i}"):
                                 st.session_state.messages[i]["content"] = new_content
+                                st.session_state.messages = st.session_state.messages[:i+1]
                                 st.session_state[f"editing_{i}"] = False
+                                st.session_state.pending_question = new_content
                                 _save_chat()
                                 st.rerun()
                         with cancel_col:
@@ -354,6 +356,14 @@ else:
                         st.rerun()
             else:
                 st.markdown(msg["content"])
+                sources = msg.get("sources")
+                if sources:
+                    source_html = '<div style="margin-top: 8px; padding: 6px 10px; background: rgba(128,128,128,0.1); border-radius: 8px; font-size: 13px;">'
+                    source_html += '<strong>Sources:</strong><br>'
+                    for j, s in enumerate(sources, start=1):
+                        source_html += f'<sup>{j}</sup> {s["filename"]} (page {s["page"]})<br>'
+                    source_html += '</div>'
+                    st.markdown(source_html, unsafe_allow_html=True)
                 feedback = msg.get("feedback")
                 fcol1, fcol2, fcol3 = st.columns([1, 1, 10])
                 with fcol1:
@@ -374,10 +384,14 @@ else:
                         _save_chat()
                         st.rerun()
 
-    if question := st.chat_input("Ask something about your documents…"):
-        st.session_state.messages.append({"role": "user", "content": question})
-        with st.chat_message("user"):
-            st.markdown(question)
+    pending = st.session_state.pop("pending_question", None)
+    question = pending or st.chat_input("Ask something about your documents…")
+
+    if question:
+        if not pending:
+            st.session_state.messages.append({"role": "user", "content": question})
+            with st.chat_message("user"):
+                st.markdown(question)
 
         with st.chat_message("assistant"):
             placeholder = st.empty()
@@ -404,18 +418,10 @@ else:
             finally:
                 placeholder.markdown(full_response)
 
-            # Show inline source footnotes (not collapsed, not a second query)
-            if source_docs:
-                source_html = '<div style="margin-top: 12px; padding: 8px 12px; background: rgba(128,128,128,0.1); border-radius: 8px; font-size: 13px;">'
-                source_html += '<strong>Sources:</strong><br>'
-                for i, s in enumerate(source_docs, start=1):
-                    source_html += f'<sup>{i}</sup> {s["filename"]} (page {s["page"]})<br>'
-                source_html += '</div>'
-                st.markdown(source_html, unsafe_allow_html=True)
-
         st.session_state.messages.append({
             "role": "assistant",
             "content": full_response,
+            "sources": source_docs,
         })
         _save_chat()
         st.rerun()
